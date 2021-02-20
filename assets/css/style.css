@@ -1,9 +1,3 @@
-/**
-* Template Name: MyResume - v4.0.0
-* Template URL: https://bootstrapmade.com/free-html-bootstrap-template-my-resume/
-* Author: BootstrapMade.com
-* License: https://bootstrapmade.com/license/
-*/
 
 /*--------------------------------------------------------------
 # General
@@ -344,6 +338,10 @@ section {
   overflow: hidden;
 }
 
+section ul {
+  list-style: none;
+}
+
 .section-title {
   text-align: center;
   padding-bottom: 30px;
@@ -388,13 +386,14 @@ section {
 section:not(#hero) a {
   display: flex;
   align-items: center;
-  color: #45505b;
+  color: #fff;
+  background: #880000;
   padding: 10px 18px;
   margin-bottom: 8px;
   transition: 0.3s;
   font-size: 15px;
   border-radius: 50px;
-  background: #f2f3f5;
+  
   height: 56px;
   width: fit-content;
   overflow: hidden;
@@ -402,8 +401,8 @@ section:not(#hero) a {
 }
 
 section:not(#hero) a:hover {
-  color: #fff;
-  background: #880000;
+  color: #45505b;
+  background: #f2f3f5;
 }
 
 /*--------------------------------------------------------------
