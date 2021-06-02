@@ -383,7 +383,7 @@ section ul {
   margin-bottom: 0;
 }
 
-section:not(#hero) a {
+section:not(#hero):not(#hobbies) a {
   display: flex;
   align-items: center;
   color: #fff;
@@ -400,7 +400,7 @@ section:not(#hero) a {
   transition: 0.3s;
 }
 
-section:not(#hero) a:hover {
+section:not(#hero):not(#hobbies) a:hover {
   color: #45505b;
   background: #f2f3f5;
 }
