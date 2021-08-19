@@ -34,16 +34,14 @@ td {
 .subtitle {
   font-size: 1.5em;
 }
-.uni a {
+.uni a, h1 a {
   color: #000;
+  padding: 4px;
+  background-color: #EDFFFF;
 }
-.uni a:hover {
+.uni a:hover, h1 a:hover {
   text-decoration: none;
   color: #3f51b5;
-}
-.uni a {
-  padding: 4px;
-  background-color: #F4FEFE;
 }
 .social {
   max-width: 400px;
@@ -54,7 +52,7 @@ td {
   color: inherit;
 }
 .social a:hover {
-  color: #880000;
+  /* color: #880000; */
   text-decoration: none;
 }
 .social p {
@@ -70,8 +68,12 @@ td {
   height: 56px;
   filter: brightness(0) saturate(100%);
 }
-.social a:hover img {
+/* .social a:hover img {
   filter: brightness(0) saturate(100%) invert(10%) sepia(65%) saturate(5640%) hue-rotate(357deg) brightness(89%) contrast(113%);
+  filter: brightness(0) invert(1);
+} */
+td:hover {
+  background: #f5c1c1;
 }
 .dropdown-content {
   display: none;
