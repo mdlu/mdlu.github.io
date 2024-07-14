@@ -48,7 +48,7 @@ td {
   color: #3f51b5;
 }
 .social {
-  width: 500px;
+  max-width: 500px;
   margin: 0 auto 40px auto;
   table-layout: fixed;
 }
