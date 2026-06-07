@@ -1,0 +1,21 @@
+# Cloudflare Pages config for the mindren.lu travel log.
+#   Local dev (NO Cloudflare account needed):  npm run dev   (= wrangler pages dev)
+#   Cloud deploy (after setup):                npm run deploy (= wrangler pages deploy)
+name = "mindren-travel-log"
+pages_build_output_dir = "."
+compatibility_date = "2026-05-01"
+
+# --- D1 (SQLite) database: structured data (places, photos) ---
+# For local dev the database_id is ignored (a local SQLite file under .wrangler/ is used).
+# After running `wrangler d1 create travel` in the cloud, paste the real id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "travel"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# --- R2 bucket: photo files (full-res originals + thumbnails) ---
+# Create in the cloud with `wrangler r2 bucket create travel-photos`.
+# For local dev the bucket is simulated automatically (no creation needed).
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "travel-photos"

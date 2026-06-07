@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Mindy's Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <link href="../assets/img/ml_small.jpg" rel="icon">
+  <link href="https://fonts.googleapis.com/css?family=Comfortaa" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+  <link rel="stylesheet" href="../assets/css/travel.css">
+</head>
+<body>
+  <div id="map"></div>
+
+  <button id="toggle-sidebar" class="tl-fab" aria-label="Show places list" title="Places">&#9776;</button>
+  <button id="toggle-views" class="tl-fab tl-fab-views" aria-label="Show saved views" title="Views">&#9733;</button>
+  <button id="toggle-edit" class="tl-fab tl-fab-edit" aria-label="Edit mode" title="Edit mode">&#9998;</button>
+
+  <aside id="sidebar" class="tl-sidebar">
+    <div class="tl-sidebar-head">
+      <div class="tl-tabs">
+        <button class="tl-tab active" data-tab="visited">Visited</button>
+        <button class="tl-tab" data-tab="wishlist">To&nbsp;Go</button>
+      </div>
+      <button id="close-sidebar" class="tl-iconbtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="tl-tabpane" id="tab-visited"><div class="tl-list" id="list-visited"></div></div>
+    <div class="tl-tabpane hidden" id="tab-wishlist"><div class="tl-list" id="list-wishlist"></div></div>
+  </aside>
+
+  <aside id="views" class="tl-sidebar tl-sidebar-right">
+    <div class="tl-sidebar-head">
+      <span class="tl-panel-title">Views</span>
+      <button id="close-views" class="tl-iconbtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="tl-tabpane"><div class="tl-list" id="list-views"></div></div>
+  </aside>
+
+  <div id="error" class="tl-error hidden"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+  <script type="module" src="../assets/js/travel/app.js"></script>
+</body>
+</html>

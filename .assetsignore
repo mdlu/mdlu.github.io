@@ -1,0 +1,15 @@
+# Files in the repo that must NOT be served as public static assets by Cloudflare Pages.
+# (Functions in /functions are handled separately and are never served as static files.)
+node_modules
+.wrangler
+.git
+.dev.vars
+.gitignore
+.assetsignore
+package.json
+package-lock.json
+wrangler.toml
+schema.sql
+seed.sql
+CLAUDE.md
+docs

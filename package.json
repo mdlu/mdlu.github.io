@@ -1,0 +1,17 @@
+{
+  "name": "mindren-travel-log",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Travel log feature for mindren.lu (Cloudflare Pages + R2 + D1). See docs/TRAVEL_LOG_PLAN.md",
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "db:init": "wrangler d1 execute travel --local --file=schema.sql",
+    "db:seed": "wrangler d1 execute travel --local --file=seed.sql",
+    "db:setup": "npm run db:init && npm run db:seed",
+    "db:query": "wrangler d1 execute travel --local --command",
+    "deploy": "wrangler pages deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.98.0"
+  }
+}

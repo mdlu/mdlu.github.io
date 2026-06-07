@@ -1,0 +1,140 @@
+:root {
+  --accent: #e8526e;      /* visited */
+  --wish: #8a93a6;        /* wishlist */
+  --ink: #2b2b2b;
+  --panel: #ffffff;
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: 'Comfortaa', Arial, Helvetica, sans-serif;
+  color: var(--ink);
+  overflow: hidden;
+}
+#map { position: absolute; inset: 0; z-index: 0; background: #a9d6f5; }
+
+/* ---------- floating controls ---------- */
+.tl-iconbtn {
+  border: none; background: #f3f3f5; border-radius: 10px;
+  width: 38px; height: 38px; font-size: 1.1rem; line-height: 1; cursor: pointer; color: var(--ink);
+}
+.tl-iconbtn:hover { background: #f5c1c1; }
+/* floating "show list" button (top-right, clear of Leaflet's zoom control top-left) */
+.tl-fab {
+  position: absolute; top: 12px; right: 12px; z-index: 1000;
+  border: none; background: rgba(255, 255, 255, 0.95); color: var(--ink);
+  width: 42px; height: 42px; border-radius: 12px; font-size: 1.2rem; line-height: 1;
+  cursor: pointer; box-shadow: var(--shadow);
+}
+.tl-fab:hover { background: #f5c1c1; }
+/* extra FABs (stacked under the list button, top-right) */
+.tl-fab-views { top: 62px; font-size: 1.05rem; }
+.tl-fab-edit { top: 112px; font-size: 1.1rem; }
+body.tl-editing .tl-fab-edit { background: var(--accent); color: #fff; }
+
+/* right "Views" sidebar contents */
+.tl-saveview {
+  display: block; width: calc(100% - 16px); margin: 8px; padding: 10px;
+  border: none; border-radius: 10px; background: #eafaef; font-family: inherit; font-weight: 700;
+  cursor: pointer;
+}
+.tl-saveview:hover { background: #d8f3e0; }
+.tl-view-row { display: flex; align-items: center; gap: 4px; padding: 1px 6px; }
+.tl-view {
+  flex: 1; text-align: left; border: none; background: none; padding: 9px 8px;
+  border-radius: 10px; cursor: pointer; font-family: inherit; font-size: 0.92rem;
+}
+.tl-view:hover { background: #fbe9ee; }
+.tl-view-act {
+  border: none; background: #e9e9ee; color: var(--ink); border-radius: 8px;
+  width: 28px; height: 28px; cursor: pointer; font-size: 13px; line-height: 1;
+}
+.tl-view-act:hover { background: #f5c1c1; }
+.tl-view-del { background: var(--accent); color: #fff; }
+.tl-view-del:hover { background: #c0392b; }
+
+/* ---------- pins ---------- */
+.tl-pin { background: none; border: none; }
+.tl-pin-dot {
+  display: block; width: 18px; height: 18px; border-radius: 50%;
+  border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.tl-pin-visited .tl-pin-dot { background: var(--accent); }
+.tl-pin-wishlist .tl-pin-dot { background: #fff; border-color: var(--wish); }
+.tl-pin-wishlist .tl-pin-dot::after {
+  content: ''; display: block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--wish); margin: 3px auto;
+}
+
+/* ---------- popup + carousel ---------- */
+.leaflet-popup-content { margin: 10px 12px; }
+.tl-popup-head { display: flex; align-items: center; gap: 8px; }
+.tl-popup h3 { margin: 0 0 6px; font-size: 1rem; }
+.tl-badge { font-size: 0.62rem; background: var(--wish); color: #fff; border-radius: 8px; padding: 2px 7px; }
+.tl-swiper {
+  width: 260px; max-width: 100%; height: 190px; border-radius: 10px; overflow: hidden; background: #f0f0f0;
+}
+.tl-swiper .swiper-slide { position: relative; display: flex; align-items: center; justify-content: center; background: #000; }
+.tl-swiper img { width: 100%; height: 190px; object-fit: cover; display: block; }
+.tl-cap {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 0.7rem; padding: 3px 6px;
+}
+.tl-cap-date { bottom: auto; top: 0; background: rgba(0, 0, 0, 0.4); }
+.tl-noimg {
+  width: 260px; max-width: 100%; height: 84px; display: flex; align-items: center; justify-content: center;
+  color: #999; background: #f6f6f6; border-radius: 10px; font-size: 0.85rem;
+}
+.tl-popup-meta { margin-top: 7px; font-size: 0.78rem; color: #555; display: flex; flex-direction: column; gap: 2px; }
+.tl-swiper .swiper-button-next, .tl-swiper .swiper-button-prev { color: #fff; transform: scale(0.55); }
+.tl-swiper .swiper-pagination-bullet-active { background: #fff; }
+
+/* ---------- sidebar ---------- */
+.tl-sidebar {
+  position: absolute; top: 0; left: 0; height: 100%; width: 340px; max-width: 85vw; z-index: 1500;
+  background: var(--panel); box-shadow: var(--shadow);
+  transform: translateX(-100%); transition: transform 0.25s ease;
+  display: flex; flex-direction: column;
+}
+.tl-sidebar.open { transform: translateX(0); }
+.tl-sidebar-right { left: auto; right: 0; transform: translateX(100%); }
+.tl-sidebar-right.open { transform: translateX(0); }
+.tl-panel-title { font-weight: 700; font-size: 0.95rem; padding: 8px 4px; }
+.tl-sidebar-head { display: flex; align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid #eee; }
+.tl-tabs { display: flex; gap: 6px; }
+.tl-tab {
+  border: none; background: #f3f3f5; border-radius: 10px; padding: 8px 14px;
+  cursor: pointer; font-family: inherit; font-size: 0.85rem;
+}
+.tl-tab.active { background: var(--accent); color: #fff; }
+.tl-sidebar-head .tl-iconbtn { margin-left: auto; }
+.tl-tabpane { overflow-y: auto; flex: 1; }
+.tl-list { padding: 8px; }
+.tl-row {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%;
+  text-align: left; border: none; background: none; padding: 10px; border-radius: 10px;
+  cursor: pointer; font-family: inherit;
+}
+.tl-row:hover { background: #fbe9ee; }
+.tl-row-name { font-size: 0.92rem; }
+.tl-row-meta { font-size: 0.72rem; color: #888; }
+.tl-empty { padding: 16px; color: #999; font-size: 0.85rem; }
+.hidden { display: none !important; }
+
+/* ---------- error toast ---------- */
+.tl-error {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 2000;
+  background: #c0392b; color: #fff; padding: 10px 16px; border-radius: 10px;
+  box-shadow: var(--shadow); font-size: 0.85rem; max-width: 90vw;
+}
+
+/* ---------- mobile: sidebar becomes a bottom sheet ---------- */
+@media (max-width: 768px) {
+  .tl-sidebar {
+    top: auto; bottom: 0; left: 0; width: 100%; max-width: 100%; height: 65%;
+    transform: translateY(100%); border-radius: 16px 16px 0 0;
+  }
+  .tl-sidebar.open { transform: translateY(0); }
+  .tl-presets { bottom: 12px; }
+}
