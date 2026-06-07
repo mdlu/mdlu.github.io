@@ -1,13 +1,15 @@
 // Entry point: load data, build the map + sidebar.
-import { getData, createPreset, updatePreset, deletePreset } from './api.js';
-import { initMap, render, flyToPlace, applyPreset, getView } from './map.js';
+import { getData, createPlace, deletePlace, deletePhoto, createPreset, updatePreset, deletePreset } from './api.js';
+import { initMap, render, flyToPlace, applyPreset, getView, setEditing, setHandlers, pickLocation } from './map.js';
 import { getPassword, hasPassword, promptAndStore } from './auth.js';
-import { escapeHtml, fmtDate } from './util.js';
+import { uploadPhoto } from './upload.js';
+import { escapeHtml, fmtDate, dateRangeLabel } from './util.js';
 
 const state = { data: null, markers: {}, editing: false };
 
 async function main() {
   initMap();
+  if (window.Fancybox) window.Fancybox.bind('[data-fancybox]');  // fullscreen photo gallery
   wireUi();
   try {
     state.data = await getData();
@@ -28,6 +30,8 @@ function wireUi() {
   document.getElementById('toggle-views').addEventListener('click', () => { sb.classList.remove('open'); views.classList.toggle('open'); });
   document.getElementById('close-views').addEventListener('click', () => views.classList.remove('open'));
   document.getElementById('toggle-edit').addEventListener('click', toggleEdit);
+  document.getElementById('add-place').addEventListener('click', onAddPlace);
+  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace });
   renderPresets();
   document.querySelectorAll('.tl-tab').forEach((t) => {
     t.addEventListener('click', () => {
@@ -79,6 +83,7 @@ async function toggleEdit() {
     state.editing = false;
   }
   document.body.classList.toggle('tl-editing', state.editing);
+  setEditing(state.editing);
   const btn = document.getElementById('toggle-edit');
   if (btn) btn.title = state.editing ? 'Editing — click to finish' : 'Edit mode';
   renderPresets();
@@ -119,17 +124,91 @@ async function onDeletePreset(id) {
   renderPresets();
 }
 
+async function refresh(reopenId) {
+  state.data = await getData();
+  state.markers = render(state.data);
+  buildSidebar(state.data);
+  renderPresets();
+  if (reopenId && state.markers[reopenId]) flyToPlace(state.markers, reopenId);
+}
+
+async function onAddPlace() {
+  showInfo('Click the map to drop the new place…');
+  pickLocation(async (latlng) => {
+    hideInfo();
+    const name = window.prompt('Name this place:');
+    if (!name || !name.trim()) return;
+    const res = await createPlace({ name: name.trim(), lat: latlng.lat, lng: latlng.lng, status: 'visited' }, getPassword());
+    if (!res.ok) { window.alert('Could not create place (' + res.status + ').'); return; }
+    const place = await res.json();
+    if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.remove('open');
+    await refresh(place.id);
+  });
+}
+
+async function onAddPhotos(place, fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  let done = 0, failed = 0;
+  showInfo(`Uploading 0/${files.length}…`);
+  for (const f of files) {
+    try { await uploadPhoto(place.id, f); } catch (e) { failed += 1; }
+    done += 1;
+    showInfo(`Uploading ${done}/${files.length}…`);
+  }
+  hideInfo();
+  if (failed) window.alert(`${failed} of ${files.length} photo(s) couldn't be uploaded.`);
+  await refresh(place.id);
+}
+
+async function onDeletePhoto(photoId, place) {
+  if (!window.confirm('Delete this photo?')) return;
+  const res = await deletePhoto(photoId, getPassword());
+  if (!res.ok) { window.alert('Could not delete photo (' + res.status + ').'); return; }
+  await refresh(place && place.id);
+}
+
+async function onDeletePlace(place) {
+  if (!window.confirm(`Delete “${place.name}” and all its photos?`)) return;
+  const res = await deletePlace(place.id, getPassword());
+  if (!res.ok) { window.alert('Could not delete place (' + res.status + ').'); return; }
+  await refresh();
+}
+
+function showInfo(msg) {
+  const e = document.getElementById('status');
+  if (!e) return;
+  e.textContent = msg; e.classList.remove('hidden');
+}
+function hideInfo() {
+  const e = document.getElementById('status');
+  if (e) e.classList.add('hidden');
+}
+
 function buildSidebar(data) {
   const photoCount = {};
-  for (const ph of data.photos) photoCount[ph.place_id] = (photoCount[ph.place_id] || 0) + 1;
+  const photoDates = {};
+  for (const ph of data.photos) {
+    photoCount[ph.place_id] = (photoCount[ph.place_id] || 0) + 1;
+    if (ph.taken_at) (photoDates[ph.place_id] ||= []).push(ph.taken_at);
+  }
+  const dateOf = (p) => {
+    const ds = photoDates[p.id] || [];
+    return ds.length ? dateRangeLabel(ds) : (p.visited_at ? fmtDate(p.visited_at) : '');
+  };
+  const sortKey = (p) => {
+    const ds = (photoDates[p.id] || []).slice().sort();
+    return ds.length ? ds[ds.length - 1] : (p.visited_at || '');
+  };
 
-  const visited = data.places.filter((p) => p.status === 'visited').sort(byVisitedDesc);
+  const visited = data.places.filter((p) => p.status === 'visited')
+    .sort((a, b) => String(sortKey(b)).localeCompare(String(sortKey(a))));
   const wishlist = data.places.filter((p) => p.status === 'wishlist').sort((a, b) => a.name.localeCompare(b.name));
 
   document.getElementById('list-visited').innerHTML =
-    visited.map((p) => placeRow(p, photoCount[p.id] || 0)).join('') || emptyMsg('No places yet — add your first!');
+    visited.map((p) => placeRow(p, photoCount[p.id] || 0, dateOf(p))).join('') || emptyMsg('No places yet — add your first!');
   document.getElementById('list-wishlist').innerHTML =
-    wishlist.map((p) => placeRow(p, photoCount[p.id] || 0)).join('') || emptyMsg('Nothing on the wishlist yet.');
+    wishlist.map((p) => placeRow(p, photoCount[p.id] || 0, dateOf(p))).join('') || emptyMsg('Nothing on the wishlist yet.');
 
   document.querySelectorAll('[data-place]').forEach((el) => {
     el.addEventListener('click', () => {
@@ -139,9 +218,8 @@ function buildSidebar(data) {
   });
 }
 
-function placeRow(p, n) {
-  const meta = [p.visited_at ? fmtDate(p.visited_at) : '', n ? `${n} photo${n > 1 ? 's' : ''}` : '']
-    .filter(Boolean).join(' · ');
+function placeRow(p, n, dateLabel) {
+  const meta = [dateLabel, n ? `${n} photo${n > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
   return `<button class="tl-row" data-place="${p.id}">
     <span class="tl-row-name">${escapeHtml(p.name)}</span>
     <span class="tl-row-meta">${escapeHtml(meta)}</span>
@@ -149,7 +227,6 @@ function placeRow(p, n) {
 }
 
 function emptyMsg(t) { return `<div class="tl-empty">${escapeHtml(t)}</div>`; }
-function byVisitedDesc(a, b) { return String(b.visited_at || '').localeCompare(String(a.visited_at || '')); }
 function showError(msg) {
   const e = document.getElementById('error');
   e.textContent = msg;

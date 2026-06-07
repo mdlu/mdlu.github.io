@@ -35,7 +35,8 @@ neutral across scales (a local café up to an overseas trip).
 tier ideal); keep it as close to the current GitHub Pages setup as possible.
 
 **Decisions already made** (from planning Q&A):
-- **Photos stored at full resolution** (originals untouched).
+- **Photos stored at full resolution.** Non-HEIC originals kept as-is; **iPhone HEIC is converted to
+  a high-quality full-res JPEG on upload** (HEIC discarded — see §6) for universal fast display.
 - **Write access = one shared passphrase** (no per-person accounts; type a secret once, remembered
   after; verified server-side).
 - This plan document lives in the repo at `docs/TRAVEL_LOG_PLAN.md`.
@@ -246,11 +247,15 @@ GPS too.
      new place and **reverse-geocode** (Nominatim, throttled + cached) for its name.
    - If GPS absent (common — see below): **manual fallback** — let the user drop/confirm a marker on
      the map or pick an existing place, and type a name. *This fallback is mandatory, not optional.*
-5. **HEIC for display** — if the file is HEIC/HEIF and the browser isn't Safari, convert a copy to
-   JPEG with **heic2any** for display (Safari renders HEIC natively). (EXIF already read in step 2.)
-6. **Thumbnail** — generate a small (~400 px long-edge) JPEG with **browser-image-compression**
-   (`useWebWorker:true`, apply `Orientation`) **for the map/carousel grid only**. The **full-res
-   original is uploaded untouched** per your choice.
+5. **HEIC → JPEG on upload** — if the file is HEIC/HEIF, convert it once to a full-res, high-quality
+   JPEG (**heic2any**, q≈0.92) and store *that*; the raw HEIC is discarded. This gives universal, fast
+   display in every browser (no render-time WASM). Trade-off: loses HDR/10-bit and is a one-time lossy
+   re-encode (visually imperceptible). EXIF was already read from the original in step 2. Non-HEIC
+   files are kept as-is.
+6. **Thumbnail** — generate a small (~600 px long-edge) JPEG with **browser-image-compression**
+   (`useWebWorker:true`, orientation handled) for fast map/carousel rendering. The **full-res image**
+   (the converted JPEG for HEIC, or the untouched original for JPEG/PNG) is stored at full resolution.
+   The heavy libs (exifr, heic2any, compression) **lazy-load only when a writer uploads**.
 7. **Upload** — `POST` the original + thumbnail to the Pages Function, which writes them to R2 via its
    binding (`env.BUCKET.put(...)`) and inserts the metadata row in D1 (place, lat/lng, `taken_at`, R2
    keys, caption). At 3–5 MB/photo this is the simplest path. *(Optional, only if you later want to
@@ -408,9 +413,11 @@ files (the existing `index.html`, `style.css`, etc. are untouched except an opti
 /.dev.vars                      # local EDIT_PASSWORD (gitignored) ✓
 ```
 
-Libraries via CDN (jsDelivr / esm.sh): Leaflet, Leaflet.markercluster, Swiper, noUiSlider, exifr,
-heic2any, browser-image-compression. Reuse the existing Bootstrap 5 + Comfortaa for visual
-consistency.
+Libraries via CDN (jsDelivr / esm.sh): Leaflet, Leaflet.markercluster, Swiper (popup carousel),
+Fancybox (fullscreen gallery), noUiSlider. The upload-only libs — exifr, heic2any,
+browser-image-compression — **lazy-load on first upload** so public viewers don't download them.
+Reuse the existing Comfortaa for visual consistency. (Fancybox is free for personal/non-commercial
+use; swap to PhotoSwipe (MIT) if that ever matters.)
 
 **Layout — desktop:** full-height **Leaflet map**; a floating list button (top-right) opens a
 **collapsible sidebar** with *Visited* / *To Go* tabs (a *Timeline* tab is added in Phase 5); a
@@ -423,8 +430,8 @@ width-constrained so they don't overflow small screens. Test pinch-zoom and swip
 
 **Feature mapping:**
 - *Map of places* → clustered markers; visited vs wishlist styled differently (filled vs hollow).
-- *Click → photo carousel* → marker popup hosts a Swiper carousel of the place's thumbnails; tap →
-  full-res original (opens in a new tab now; a lightbox can come later).
+- *Click → photo carousel* → marker popup hosts a Swiper carousel of the place's thumbnails; tap a
+  photo → **fullscreen, swipeable, zoomable gallery** of that place (Fancybox).
 - *Region presets / views* → DB-backed quick-jump list in the right **Views** sidebar; in edit mode, save the current view as a named
   preset, rename it, or delete one (with a confirm). Seed defaults: World / Boston / SF Bay.
 - *Edit mode / write access* → the ✎ button unlocks edit mode via the shared passphrase (remembered
@@ -433,7 +440,9 @@ width-constrained so they don't overflow small screens. Test pinch-zoom and swip
   to `visited` (writers only).
 - *Upload/delete photos, persists for all* → edit mode → upload pipeline (§6) / per-photo delete.
 - *Auto-location from EXIF* → §6 step 4; manual fallback when GPS missing.
-- *Dates/times* → `taken_at` shown on photos and drives the timeline.
+- *Dates/times* → each photo's `taken_at` (from EXIF) is shown; a **place's date is derived from its
+  photos** (a single date or a range). `visited_at` is only a fallback for photo-less places, and
+  photo dates drive the timeline.
 - *Timeline view* → noUiSlider range filters markers + the sidebar list by `taken_at`.
 
 **Inspiration to borrow from** (researched):

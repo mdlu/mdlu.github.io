@@ -21,6 +21,20 @@ export async function authedFetch(path, opts = {}, password) {
   return res;
 }
 
+export async function createPlace(place, password) {
+  return authedFetch('/places', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(place),
+  }, password);
+}
+
+export async function deletePlace(id, password) {
+  return authedFetch(`/places/${id}`, { method: 'DELETE' }, password);
+}
+
+export async function deletePhoto(id, password) {
+  return authedFetch(`/photos/${id}`, { method: 'DELETE' }, password);
+}
+
 export async function createPreset(preset, password) {
   return authedFetch('/presets', {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(preset),

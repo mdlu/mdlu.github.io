@@ -1,10 +1,22 @@
 // Leaflet map: clustered place markers + photo-carousel popups.
 import { CONFIG } from './config.js';
 import { photoUrl } from './api.js';
-import { escapeHtml, fmtDate } from './util.js';
+import { escapeHtml, fmtDate, dateRangeLabel } from './util.js';
 
 let map, cluster;
 let photosByPlace = {};
+let editing = false;
+let handlers = {};
+
+export function setEditing(v) { editing = !!v; }
+export function setHandlers(h) { handlers = h || {}; }
+
+// One-shot: next map click returns its latlng (for adding a place by clicking the map).
+export function pickLocation(cb) {
+  const onClick = (e) => { map.off('click', onClick); map.getContainer().style.cursor = ''; cb(e.latlng); };
+  map.getContainer().style.cursor = 'crosshair';
+  map.on('click', onClick);
+}
 
 export function initMap() {
   map = L.map('map', {
@@ -86,11 +98,12 @@ function popupEl(place) {
   if (photos.length) {
     const slides = photos.map((p) => `
       <div class="swiper-slide">
-        <a href="${photoUrl(p.r2_key)}" target="_blank" rel="noopener">
+        <a href="${photoUrl(p.r2_key)}" data-fancybox="tl-${place.id}" data-caption="${escapeHtml([fmtDate(p.taken_at), p.caption].filter(Boolean).join(' · '))}" target="_blank" rel="noopener">
           <img src="${photoUrl(p.thumb_key)}" loading="lazy" alt="">
         </a>
         ${p.taken_at ? `<div class="tl-cap tl-cap-date">${fmtDate(p.taken_at)}</div>` : ''}
         ${p.caption ? `<div class="tl-cap">${escapeHtml(p.caption)}</div>` : ''}
+        ${editing ? `<button class="tl-photo-del" data-photo="${p.id}" title="Delete photo" aria-label="Delete photo">&times;</button>` : ''}
       </div>`).join('');
     media = `
       <div class="swiper tl-swiper">
@@ -104,13 +117,33 @@ function popupEl(place) {
   }
 
   const badge = place.status === 'wishlist' ? '<span class="tl-badge">Wishlist</span>' : '';
-  const date = place.visited_at ? `<span>${fmtDate(place.visited_at)}</span>` : '';
+  const photoDates = photos.map((p) => p.taken_at).filter(Boolean);
+  const dateLabel = photoDates.length ? dateRangeLabel(photoDates) : (place.visited_at ? fmtDate(place.visited_at) : '');
+  const date = dateLabel ? `<span>${escapeHtml(dateLabel)}</span>` : '';
   const notes = place.notes ? `<span class="tl-notes">${escapeHtml(place.notes)}</span>` : '';
+  const tools = editing ? `
+    <div class="tl-edit-tools">
+      <label class="tl-btn">Add photos<input type="file" accept="image/*" multiple hidden class="tl-addphotos"></label>
+      <button class="tl-btn tl-btn-danger tl-delplace">Delete place</button>
+    </div>` : '';
 
   el.innerHTML = `
     <div class="tl-popup-head"><h3>${escapeHtml(place.name)}</h3>${badge}</div>
     ${media}
-    <div class="tl-popup-meta">${date}${notes}</div>`;
+    <div class="tl-popup-meta">${date}${notes}</div>
+    ${tools}`;
+
+  if (editing) {
+    const addInput = el.querySelector('.tl-addphotos');
+    if (addInput) addInput.addEventListener('change', (e) => handlers.onAddPhotos && handlers.onAddPhotos(place, e.target.files));
+    const delPlaceBtn = el.querySelector('.tl-delplace');
+    if (delPlaceBtn) delPlaceBtn.addEventListener('click', () => handlers.onDeletePlace && handlers.onDeletePlace(place));
+    el.querySelectorAll('.tl-photo-del').forEach((b) =>
+      b.addEventListener('click', (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        handlers.onDeletePhoto && handlers.onDeletePhoto(b.getAttribute('data-photo'), place);
+      }));
+  }
   return el;
 }
 

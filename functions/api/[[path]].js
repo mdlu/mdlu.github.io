@@ -119,7 +119,7 @@ async function addPlace(request, env) {
   const id = b.id || crypto.randomUUID();
   const status = b.status === 'wishlist' ? 'wishlist' : 'visited';
   const created_at = new Date().toISOString();
-  const visited_at = b.visited_at || (status === 'visited' ? created_at.slice(0, 10) : null);
+  const visited_at = b.visited_at || null;  // place date is derived from its photos; this is only a fallback
   await env.DB.prepare(
     `INSERT INTO places (id, name, lat, lng, status, visited_at, notes, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`

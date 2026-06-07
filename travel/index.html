@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5/dist/fancybox/fancybox.css">
   <link rel="stylesheet" href="../assets/css/travel.css">
 </head>
 <body>
@@ -28,6 +29,7 @@
       </div>
       <button id="close-sidebar" class="tl-iconbtn" aria-label="Close">&times;</button>
     </div>
+    <button id="add-place" class="tl-addplace">+ Add place (then click the map)</button>
     <div class="tl-tabpane" id="tab-visited"><div class="tl-list" id="list-visited"></div></div>
     <div class="tl-tabpane hidden" id="tab-wishlist"><div class="tl-list" id="list-wishlist"></div></div>
   </aside>
@@ -40,11 +42,13 @@
     <div class="tl-tabpane"><div class="tl-list" id="list-views"></div></div>
   </aside>
 
+  <div id="status" class="tl-status hidden"></div>
   <div id="error" class="tl-error hidden"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5/dist/fancybox/fancybox.umd.js"></script>
   <script type="module" src="../assets/js/travel/app.js"></script>
 </body>
 </html>
