@@ -163,6 +163,20 @@ body.tl-editing .tl-addplace { display: block; }
 }
 .tl-hint { margin-top: 6px; font-size: 0.7rem; color: #999; }
 
+/* timeline tab */
+.tl-timeline-head { padding: 16px 16px 10px; border-bottom: 1px solid #eee; }
+.tl-tl-labels { font-size: 0.8rem; color: #555; margin-bottom: 18px; text-align: center; min-height: 1em; }
+.tl-tl-slider { margin: 0 8px 40px; }
+.tl-tl-reset { border: none; background: #f3f3f5; border-radius: 8px; padding: 6px 12px; font-family: inherit; font-size: 0.78rem; cursor: pointer; }
+.tl-tl-reset:hover { background: #f5c1c1; }
+.tl-tl-slider .noUi-connect { background: var(--accent); }
+.tl-tl-slider .noUi-handle { border-radius: 50%; width: 18px; height: 18px; right: -9px; top: -6px; box-shadow: var(--shadow); }
+.tl-tl-slider.noUi-horizontal { height: 6px; }
+.tl-tl-slider .noUi-handle::before, .tl-tl-slider .noUi-handle::after { display: none; }
+.tl-tl-slider .noUi-value { font-size: 0.62rem; color: #888; margin-top: 2px; }
+.tl-tl-slider .noUi-marker-large { height: 9px; background: #bbb; }
+.tl-tl-slider .noUi-marker { background: #ddd; }
+
 /* ---------- mobile: sidebar becomes a bottom sheet ---------- */
 @media (max-width: 768px) {
   .tl-sidebar {

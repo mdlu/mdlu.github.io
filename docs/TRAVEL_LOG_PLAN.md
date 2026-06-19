@@ -423,7 +423,7 @@ Reuse the existing Comfortaa for visual consistency. (Fancybox is free for perso
 use; swap to PhotoSwipe (MIT) if that ever matters.)
 
 **Layout — desktop:** full-height **Leaflet map**; a floating list button (top-right) opens a
-**collapsible sidebar** with *Visited* / *To Go* tabs (a *Timeline* tab is added in Phase 5); a
+**collapsible sidebar** with *Visited* / *To Go* / *Timeline* tabs; a
 floating **✎ edit** button unlocks edit mode (passphrase); a right-side **Views** sidebar (★ button)
 holds the saved presets; Leaflet's zoom control is top-left.
 
@@ -449,7 +449,9 @@ width-constrained so they don't overflow small screens. Test pinch-zoom and swip
 - *Dates/times* → each photo's `taken_at` (from EXIF) is shown; a **place's date is derived from its
   photos** (a single date or a range). `visited_at` is only a fallback for photo-less places, and
   photo dates drive the timeline.
-- *Timeline view* → noUiSlider range filters markers + the sidebar list by `taken_at`.
+- *Timeline view* → a **Timeline tab** with a noUiSlider date-range slider (with **year tick marks**)
+  that filters the map markers and shows a chronological list by `taken_at`. Undated places (wishlist
+  / photo-less) stay visible; a Reset button returns to the full span.
 
 **Inspiration to borrow from** (researched):
 [`jasonlcy91/embers-of-life-china-trip-2026`](https://github.com/jasonlcy91/embers-of-life-china-trip-2026)

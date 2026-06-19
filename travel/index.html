@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5/dist/fancybox/fancybox.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15/dist/nouislider.min.css">
   <link rel="stylesheet" href="../assets/css/travel.css">
 </head>
 <body>
@@ -26,6 +27,7 @@
       <div class="tl-tabs">
         <button class="tl-tab active" data-tab="visited">Visited</button>
         <button class="tl-tab" data-tab="wishlist">To&nbsp;Go</button>
+        <button class="tl-tab" data-tab="timeline">Timeline</button>
       </div>
       <button id="close-sidebar" class="tl-iconbtn" aria-label="Close">&times;</button>
     </div>
@@ -33,6 +35,14 @@
     <button id="add-place" class="tl-addplace">+ Add place (then click the map)</button>
     <div class="tl-tabpane" id="tab-visited"><div class="tl-list" id="list-visited"></div></div>
     <div class="tl-tabpane hidden" id="tab-wishlist"><div class="tl-list" id="list-wishlist"></div></div>
+    <div class="tl-tabpane hidden" id="tab-timeline">
+      <div class="tl-timeline-head">
+        <div id="timeline-labels" class="tl-tl-labels"></div>
+        <div id="timeline-slider" class="tl-tl-slider"></div>
+        <button id="timeline-reset" class="tl-tl-reset">Reset</button>
+      </div>
+      <div class="tl-list" id="list-timeline"></div>
+    </div>
   </aside>
 
   <aside id="views" class="tl-sidebar tl-sidebar-right">
@@ -50,6 +60,7 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5/dist/fancybox/fancybox.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nouislider@15/dist/nouislider.min.js"></script>
   <script type="module" src="../assets/js/travel/app.js"></script>
 </body>
 </html>

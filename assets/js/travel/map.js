@@ -50,12 +50,13 @@ export function getView() {
 }
 
 // Render all places; returns { placeId: marker } for sidebar fly-to.
-export function render(data) {
+export function render(data, range) {
   photosByPlace = groupPhotos(data.photos || []);
   allPlaces = data.places || [];
   cluster.clearLayers();
   const markers = {};
   for (const place of allPlaces) {
+    if (!placeInRange(place, range)) continue;
     const m = L.marker([place.lat, place.lng], { icon: iconFor(place.status), draggable: editing });
     m.bindPopup(() => popupEl(place), { maxWidth: 300, minWidth: 240, className: 'tl-popup-wrap' });
     m.on('popupopen', (e) => initCarousel(e.popup));
@@ -64,6 +65,17 @@ export function render(data) {
     cluster.addLayer(m);
   }
   return markers;
+}
+
+// A place passes the date filter if it's undated (no photos) or has a photo within [start, end].
+function placeInRange(place, range) {
+  if (!range) return true;
+  const ds = photosByPlace[place.id] || [];
+  if (!ds.length) return true;
+  return ds.some((p) => {
+    const t = p.taken_at ? new Date(p.taken_at).getTime() : NaN;
+    return !isNaN(t) && t >= range[0] && t <= range[1];
+  });
 }
 
 export function flyToPlace(markers, id) {

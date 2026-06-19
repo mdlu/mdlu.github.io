@@ -6,7 +6,10 @@ import { processFile, uploadProcessed, uploadPhoto } from './upload.js';
 import { reverseGeocode, distanceMeters, centroidOf, groupByProximity } from './geo.js';
 import { escapeHtml, fmtDate, dateRangeLabel } from './util.js';
 
-const state = { data: null, markers: {}, editing: false };
+const state = { data: null, markers: {}, editing: false, range: null };
+let timelineSlider = null;
+
+function rerender() { state.markers = render(state.data, state.range); }
 
 async function main() {
   initMap();
@@ -18,9 +21,10 @@ async function main() {
     showError('Could not load travel data — is the dev server running? (' + err.message + ')');
     return;
   }
-  state.markers = render(state.data);
+  rerender();
   buildSidebar(state.data);
   renderPresets();
+  buildTimeline();
 }
 
 function wireUi() {
@@ -41,8 +45,9 @@ function wireUi() {
       document.querySelectorAll('.tl-tab').forEach((x) => x.classList.remove('active'));
       t.classList.add('active');
       const tab = t.getAttribute('data-tab');
-      document.getElementById('tab-visited').classList.toggle('hidden', tab !== 'visited');
-      document.getElementById('tab-wishlist').classList.toggle('hidden', tab !== 'wishlist');
+      ['visited', 'wishlist', 'timeline'].forEach((name) => {
+        document.getElementById('tab-' + name).classList.toggle('hidden', tab !== name);
+      });
     });
   });
 }
@@ -87,7 +92,7 @@ async function toggleEdit() {
   }
   document.body.classList.toggle('tl-editing', state.editing);
   setEditing(state.editing);
-  if (state.data) state.markers = render(state.data);   // re-create markers so draggable matches edit mode
+  if (state.data) rerender();   // re-create markers so draggable matches edit mode
   const btn = document.getElementById('toggle-edit');
   if (btn) btn.title = state.editing ? 'Editing — click to finish' : 'Edit mode';
   renderPresets();
@@ -130,9 +135,10 @@ async function onDeletePreset(id) {
 
 async function refresh(reopenId) {
   state.data = await getData();
-  state.markers = render(state.data);
+  rerender();
   buildSidebar(state.data);
   renderPresets();
+  buildTimeline();
   if (reopenId && state.markers[reopenId]) flyToPlace(state.markers, reopenId);
 }
 
@@ -258,7 +264,7 @@ async function onMovePlace(place, latlng) {
   if (!res.ok) { window.alert('Could not move place (' + res.status + ').'); await refresh(place.id); return; }
   const p = state.data.places.find((x) => x.id === place.id);
   if (p) { p.lat = latlng.lat; p.lng = latlng.lng; }
-  state.markers = render(state.data);   // re-cluster at the new position
+  rerender();   // re-cluster at the new position
 }
 
 async function onMergePlace(place, intoId) {
@@ -271,6 +277,97 @@ async function onMergePlace(place, intoId) {
   const res = await mergePlace(place.id, intoId, getPassword());
   if (!res.ok) { window.alert('Could not merge (' + res.status + ').'); return; }
   await refresh(intoId);
+}
+
+function buildTimeline() {
+  const sliderEl = document.getElementById('timeline-slider');
+  const labels = document.getElementById('timeline-labels');
+  if (!sliderEl || !labels) return;
+  if (timelineSlider) { timelineSlider.destroy(); timelineSlider = null; }
+
+  const ts = (state.data.photos || [])
+    .map((p) => p.taken_at).filter(Boolean)
+    .map((s) => new Date(s).getTime()).filter((t) => !isNaN(t));
+
+  if (ts.length < 1 || !window.noUiSlider) {
+    labels.textContent = 'No dated photos yet.';
+    sliderEl.innerHTML = '';
+    document.getElementById('list-timeline').innerHTML = '';
+    state.range = null;
+    return;
+  }
+
+  const day = 86400000;
+  const lo = Math.min(...ts);
+  const hi = Math.max(Math.max(...ts), lo + day);
+  state.range = null; // start unfiltered (full span)
+
+  // Year tick marks (a labelled line at each Jan 1 within the span); months if it's under a year.
+  const years = [];
+  for (let y = new Date(lo).getUTCFullYear(); y <= new Date(hi).getUTCFullYear() + 1; y++) {
+    const t = Date.UTC(y, 0, 1);
+    if (t >= lo && t <= hi) years.push(t);
+  }
+  const pips = years.length >= 1
+    ? { mode: 'values', values: years, density: 100, format: { to: (v) => String(new Date(+v).getUTCFullYear()), from: Number } }
+    : { mode: 'count', values: 4, density: 100, format: { to: (v) => new Date(+v).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }), from: Number } };
+
+  window.noUiSlider.create(sliderEl, {
+    start: [lo, hi], connect: true, behaviour: 'drag',
+    range: { min: lo, max: hi }, step: day, pips,
+  });
+  timelineSlider = sliderEl.noUiSlider;
+
+  timelineSlider.on('update', (vals) => {
+    labels.textContent = `${fmtDate(new Date(+vals[0]))} – ${fmtDate(new Date(+vals[1]))}`;
+  });
+  timelineSlider.on('change', (vals) => {
+    const a = Math.round(+vals[0]); const b = Math.round(+vals[1]);
+    state.range = (a <= lo && b >= hi) ? null : [a, b + day - 1];
+    rerender();
+    buildTimelineList();
+  });
+  document.getElementById('timeline-reset').onclick = () => {
+    timelineSlider.set([lo, hi]);
+    state.range = null;
+    rerender();
+    buildTimelineList();
+  };
+
+  buildTimelineList();
+}
+
+function buildTimelineList() {
+  const wrap = document.getElementById('list-timeline');
+  if (!wrap) return;
+  const range = state.range;
+  const inRange = (t) => !range || (t >= range[0] && t <= range[1]);
+
+  const byPlace = {};
+  for (const ph of state.data.photos || []) {
+    if (!ph.taken_at) continue;
+    const t = new Date(ph.taken_at).getTime();
+    if (isNaN(t) || !inRange(t)) continue;
+    (byPlace[ph.place_id] ||= []).push(t);
+  }
+  const rows = Object.keys(byPlace).map((pid) => {
+    const place = state.data.places.find((p) => p.id === pid);
+    if (!place) return null;
+    const dates = byPlace[pid].sort((a, b) => a - b);
+    return { place, first: dates[0], count: dates.length, label: dateRangeLabel(dates.map((t) => new Date(t).toISOString())) };
+  }).filter(Boolean).sort((a, b) => a.first - b.first);
+
+  wrap.innerHTML = rows.length
+    ? rows.map((r) => `<button class="tl-row" data-place="${r.place.id}">
+        <span class="tl-row-name">${escapeHtml(r.place.name)}</span>
+        <span class="tl-row-meta">${escapeHtml(r.label)}</span>
+      </button>`).join('')
+    : '<div class="tl-empty">No photos in this date range.</div>';
+
+  wrap.querySelectorAll('[data-place]').forEach((el) => el.addEventListener('click', () => {
+    flyToPlace(state.markers, el.getAttribute('data-place'));
+    if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.remove('open');
+  }));
 }
 
 function showInfo(msg) {
