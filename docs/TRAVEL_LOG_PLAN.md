@@ -442,8 +442,9 @@ width-constrained so they don't overflow small screens. Test pinch-zoom and swip
 - *Manage places (edit mode)* → **drag a pin** to move it (persists via `PATCH /places/:id`); a
   **"Merge into…"** dropdown in a place's popup combines it into another place (its photos move over,
   the old place is removed).
-- *Wishlist with check-off* → the *To Go* tab lists `status='wishlist'` places; checking flips them
-  to `visited` (writers only).
+- *Wishlist with check-off* → the *To Go* tab lists `status='wishlist'` places; **"+ Add a place to
+  go"** creates one (reverse-geocoded name suggestion); a **✓** on each row (or "Mark as visited" in
+  the popup) flips it to `visited` (writers only), moving it to the Visited tab.
 - *Upload/delete photos, persists for all* → edit mode → upload pipeline (§6) / per-photo delete.
 - *Auto-location from EXIF* → §6 step 4; manual fallback when GPS missing.
 - *Dates/times* → each photo's `taken_at` (from EXIF) is shown; a **place's date is derived from its

@@ -140,6 +140,7 @@ function popupEl(place) {
   const tools = editing ? `
     <div class="tl-edit-tools">
       <label class="tl-btn">Add photos<input type="file" accept="image/*" multiple hidden class="tl-addphotos"></label>
+      ${place.status === 'wishlist' ? `<button class="tl-btn tl-checkvisited">Mark as visited</button>` : ''}
       <button class="tl-btn tl-btn-danger tl-delplace">Delete place</button>
     </div>
     ${others.length ? `<div class="tl-merge-row">
@@ -167,6 +168,8 @@ function popupEl(place) {
     if (mergeSel) mergeSel.addEventListener('change', () => {
       if (mergeSel.value) handlers.onMergePlace && handlers.onMergePlace(place, mergeSel.value);
     });
+    const checkBtn = el.querySelector('.tl-checkvisited');
+    if (checkBtn) checkBtn.addEventListener('click', () => handlers.onCheckOff && handlers.onCheckOff(place.id));
   }
   return el;
 }

@@ -177,6 +177,15 @@ body.tl-editing .tl-addplace { display: block; }
 .tl-tl-slider .noUi-marker-large { height: 9px; background: #bbb; }
 .tl-tl-slider .noUi-marker { background: #ddd; }
 
+/* wishlist check-off rows */
+.tl-wish-row { display: flex; align-items: center; gap: 4px; padding-right: 8px; }
+.tl-wish-row .tl-row { flex: 1; }
+.tl-check {
+  border: none; background: #eafaef; color: #1a7f37; border-radius: 8px;
+  width: 30px; height: 30px; font-size: 15px; line-height: 1; cursor: pointer; flex: none;
+}
+.tl-check:hover { background: #c8efd3; }
+
 /* ---------- mobile: sidebar becomes a bottom sheet ---------- */
 @media (max-width: 768px) {
   .tl-sidebar {

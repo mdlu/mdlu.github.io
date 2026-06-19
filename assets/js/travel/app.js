@@ -36,9 +36,10 @@ function wireUi() {
   document.getElementById('close-views').addEventListener('click', () => views.classList.remove('open'));
   document.getElementById('toggle-edit').addEventListener('click', toggleEdit);
   document.getElementById('add-place').addEventListener('click', onAddPlace);
+  document.getElementById('add-wishlist').addEventListener('click', onAddWishlist);
   const addPhotosInput = document.querySelector('#add-photos input');
   if (addPhotosInput) addPhotosInput.addEventListener('change', (e) => { onAddPhotosAuto(e.target.files); e.target.value = ''; });
-  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace });
+  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace, onCheckOff });
   renderPresets();
   document.querySelectorAll('.tl-tab').forEach((t) => {
     t.addEventListener('click', () => {
@@ -154,6 +155,27 @@ async function onAddPlace() {
     if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.remove('open');
     await refresh(place.id);
   });
+}
+
+async function onAddWishlist() {
+  showInfo('Click the map to drop the place you want to go…');
+  pickLocation(async (latlng) => {
+    hideInfo();
+    const suggested = await reverseGeocode(latlng.lat, latlng.lng);
+    const name = window.prompt('Name this place to go:', suggested || '');
+    if (!name || !name.trim()) return;
+    const res = await createPlace({ name: name.trim(), lat: latlng.lat, lng: latlng.lng, status: 'wishlist' }, getPassword());
+    if (!res.ok) { window.alert('Could not add (' + res.status + ').'); return; }
+    const place = await res.json();
+    if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.remove('open');
+    await refresh(place.id);
+  });
+}
+
+async function onCheckOff(id) {
+  const res = await updatePlace(id, { status: 'visited' }, getPassword());
+  if (!res.ok) { window.alert('Could not update (' + res.status + ').'); return; }
+  await refresh(id);
 }
 
 async function onAddPhotos(place, fileList) {
@@ -403,14 +425,18 @@ function buildSidebar(data) {
   document.getElementById('list-visited').innerHTML =
     visited.map((p) => placeRow(p, photoCount[p.id] || 0, dateOf(p))).join('') || emptyMsg('No places yet — add your first!');
   document.getElementById('list-wishlist').innerHTML =
-    wishlist.map((p) => placeRow(p, photoCount[p.id] || 0, dateOf(p))).join('') || emptyMsg('Nothing on the wishlist yet.');
+    wishlist.map((p) => wishlistRow(p, dateOf(p))).join('') || emptyMsg('Nothing on the wishlist yet.');
 
-  document.querySelectorAll('[data-place]').forEach((el) => {
+  document.querySelectorAll('#list-visited [data-place], #list-wishlist [data-place]').forEach((el) => {
     el.addEventListener('click', () => {
       flyToPlace(state.markers, el.getAttribute('data-place'));
       if (window.matchMedia('(max-width: 768px)').matches) closeSidebar();
     });
   });
+  document.querySelectorAll('#list-wishlist [data-check]').forEach((el) => el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onCheckOff(el.getAttribute('data-check'));
+  }));
 }
 
 function placeRow(p, n, dateLabel) {
@@ -419,6 +445,15 @@ function placeRow(p, n, dateLabel) {
     <span class="tl-row-name">${escapeHtml(p.name)}</span>
     <span class="tl-row-meta">${escapeHtml(meta)}</span>
   </button>`;
+}
+
+function wishlistRow(p, dateLabel) {
+  const main = `<button class="tl-row" data-place="${p.id}">
+    <span class="tl-row-name">${escapeHtml(p.name)}</span>
+    <span class="tl-row-meta">${escapeHtml(dateLabel || '')}</span>
+  </button>`;
+  if (!state.editing) return main;
+  return `<div class="tl-wish-row">${main}<button class="tl-check" data-check="${p.id}" title="Mark as visited" aria-label="Mark ${escapeHtml(p.name)} as visited">✓</button></div>`;
 }
 
 function emptyMsg(t) { return `<div class="tl-empty">${escapeHtml(t)}</div>`; }
