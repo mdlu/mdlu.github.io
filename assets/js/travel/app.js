@@ -1,8 +1,9 @@
 // Entry point: load data, build the map + sidebar.
-import { getData, createPlace, deletePlace, deletePhoto, createPreset, updatePreset, deletePreset } from './api.js';
+import { getData, createPlace, updatePlace, deletePlace, deletePhoto, mergePlace, createPreset, updatePreset, deletePreset } from './api.js';
 import { initMap, render, flyToPlace, applyPreset, getView, setEditing, setHandlers, pickLocation } from './map.js';
 import { getPassword, hasPassword, promptAndStore } from './auth.js';
-import { uploadPhoto } from './upload.js';
+import { processFile, uploadProcessed, uploadPhoto } from './upload.js';
+import { reverseGeocode, distanceMeters, centroidOf, groupByProximity } from './geo.js';
 import { escapeHtml, fmtDate, dateRangeLabel } from './util.js';
 
 const state = { data: null, markers: {}, editing: false };
@@ -31,7 +32,9 @@ function wireUi() {
   document.getElementById('close-views').addEventListener('click', () => views.classList.remove('open'));
   document.getElementById('toggle-edit').addEventListener('click', toggleEdit);
   document.getElementById('add-place').addEventListener('click', onAddPlace);
-  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace });
+  const addPhotosInput = document.querySelector('#add-photos input');
+  if (addPhotosInput) addPhotosInput.addEventListener('change', (e) => { onAddPhotosAuto(e.target.files); e.target.value = ''; });
+  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace });
   renderPresets();
   document.querySelectorAll('.tl-tab').forEach((t) => {
     t.addEventListener('click', () => {
@@ -84,6 +87,7 @@ async function toggleEdit() {
   }
   document.body.classList.toggle('tl-editing', state.editing);
   setEditing(state.editing);
+  if (state.data) state.markers = render(state.data);   // re-create markers so draggable matches edit mode
   const btn = document.getElementById('toggle-edit');
   if (btn) btn.title = state.editing ? 'Editing — click to finish' : 'Edit mode';
   renderPresets();
@@ -173,6 +177,100 @@ async function onDeletePlace(place) {
   const res = await deletePlace(place.id, getPassword());
   if (!res.ok) { window.alert('Could not delete place (' + res.status + ').'); return; }
   await refresh();
+}
+
+// Add a batch of photos and auto-place them on the map by their GPS.
+async function onAddPhotosAuto(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  // 1) process all (EXIF date + GPS, HEIC->JPEG, thumbnail)
+  const processed = [];
+  for (let i = 0; i < files.length; i++) {
+    showInfo(`Reading ${i + 1}/${files.length}…`);
+    try { processed.push(await processFile(files[i])); } catch (e) { /* skip unreadable */ }
+  }
+  const geo = processed.filter((p) => p.lat != null && p.lng != null);
+  const noGeo = processed.filter((p) => p.lat == null || p.lng == null);
+
+  // 2) group GPS photos by proximity (~200 m), then match an existing place or create one per group
+  let uploaded = 0;
+  for (const group of groupByProximity(geo, 200)) {
+    const c = centroidOf(group);
+    let place = nearestPlace(c, 200);
+    if (!place) {
+      showInfo('Looking up place name…');
+      const suggested = await reverseGeocode(c.lat, c.lng);
+      const name = window.prompt('Name this place:', suggested || '');
+      if (!name || !name.trim()) continue;               // user skipped this group
+      const res = await createPlace({ name: name.trim(), lat: c.lat, lng: c.lng, status: 'visited' }, getPassword());
+      if (!res.ok) { window.alert('Could not create place (' + res.status + ').'); continue; }
+      place = await res.json();
+      state.data.places.push(place);                     // so later groups can match it
+    }
+    for (const ph of group) {
+      showInfo(`Uploading ${++uploaded}/${geo.length}…`);
+      try { await uploadProcessed(place.id, ph); } catch (e) { /* keep going */ }
+    }
+  }
+
+  // 3) photos without GPS -> let the user place them on the map
+  hideInfo();
+  if (noGeo.length && window.confirm(`${noGeo.length} photo(s) had no location. Place them on the map now?`)) {
+    await placeNoGeoPhotos(noGeo);
+  }
+  await refresh();
+}
+
+function nearestPlace(pt, meters) {
+  let best = null, bestD = Infinity;
+  for (const p of state.data.places) {
+    const d = distanceMeters(pt, { lat: p.lat, lng: p.lng });
+    if (d < bestD) { bestD = d; best = p; }
+  }
+  return best && bestD <= meters ? best : null;
+}
+
+function placeNoGeoPhotos(photos) {
+  return new Promise((resolve) => {
+    showInfo('Click the map to place the photo(s) without location…');
+    pickLocation(async (latlng) => {
+      hideInfo();
+      let place = nearestPlace({ lat: latlng.lat, lng: latlng.lng }, 200);
+      if (!place) {
+        const suggested = await reverseGeocode(latlng.lat, latlng.lng);
+        const name = window.prompt('Name this place:', suggested || '');
+        if (!name || !name.trim()) return resolve();
+        const res = await createPlace({ name: name.trim(), lat: latlng.lat, lng: latlng.lng, status: 'visited' }, getPassword());
+        if (!res.ok) { window.alert('Could not create place (' + res.status + ').'); return resolve(); }
+        place = await res.json();
+      }
+      let i = 0;
+      for (const ph of photos) { showInfo(`Uploading ${++i}/${photos.length}…`); try { await uploadProcessed(place.id, ph); } catch (e) { /* */ } }
+      hideInfo();
+      resolve();
+    });
+  });
+}
+
+async function onMovePlace(place, latlng) {
+  const res = await updatePlace(place.id, { lat: latlng.lat, lng: latlng.lng }, getPassword());
+  if (!res.ok) { window.alert('Could not move place (' + res.status + ').'); await refresh(place.id); return; }
+  const p = state.data.places.find((x) => x.id === place.id);
+  if (p) { p.lat = latlng.lat; p.lng = latlng.lng; }
+  state.markers = render(state.data);   // re-cluster at the new position
+}
+
+async function onMergePlace(place, intoId) {
+  const target = state.data.places.find((x) => x.id === intoId);
+  if (!target) return;
+  if (!window.confirm(`Merge “${place.name}” into “${target.name}”?\nIts photos move there and “${place.name}” is removed.`)) {
+    await refresh();   // reset the dropdown
+    return;
+  }
+  const res = await mergePlace(place.id, intoId, getPassword());
+  if (!res.ok) { window.alert('Could not merge (' + res.status + ').'); return; }
+  await refresh(intoId);
 }
 
 function showInfo(msg) {

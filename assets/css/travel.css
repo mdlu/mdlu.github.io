@@ -156,6 +156,12 @@ body.tl-editing .tl-addplace { display: block; }
   background: rgba(192, 57, 43, 0.92); color: #fff; border-radius: 50%;
   width: 24px; height: 24px; font-size: 15px; line-height: 1; cursor: pointer;
 }
+.tl-merge-row { margin-top: 6px; }
+.tl-merge {
+  width: 100%; padding: 6px; border-radius: 8px; border: 1px solid #ddd;
+  font-family: inherit; font-size: 0.8rem; background: #fff;
+}
+.tl-hint { margin-top: 6px; font-size: 0.7rem; color: #999; }
 
 /* ---------- mobile: sidebar becomes a bottom sheet ---------- */
 @media (max-width: 768px) {

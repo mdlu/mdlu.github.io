@@ -54,15 +54,19 @@ export async function processFile(file) {
   return { full, thumb, takenAt, lat, lng };
 }
 
-export async function uploadPhoto(placeId, file) {
-  const { full, thumb, takenAt, lat, lng } = await processFile(file);
+// Upload an already-processed photo ({ full, thumb, takenAt, lat, lng }).
+export async function uploadProcessed(placeId, p) {
   const fd = new FormData();
-  fd.append('original', full, full.name || 'photo.jpg');
-  if (thumb) fd.append('thumb', thumb, 'thumb.jpg');
-  fd.append('meta', JSON.stringify({ place_id: placeId, taken_at: takenAt, lat, lng }));
+  fd.append('original', p.full, (p.full && p.full.name) || 'photo.jpg');
+  if (p.thumb) fd.append('thumb', p.thumb, 'thumb.jpg');
+  fd.append('meta', JSON.stringify({ place_id: placeId, taken_at: p.takenAt, lat: p.lat, lng: p.lng }));
   const res = await authedFetch('/photos', { method: 'POST', body: fd }, getPassword());
   if (!res.ok) throw new Error('upload failed (' + res.status + ')');
   return res.json();
+}
+
+export async function uploadPhoto(placeId, file) {
+  return uploadProcessed(placeId, await processFile(file));
 }
 
 function isHeic(file) {

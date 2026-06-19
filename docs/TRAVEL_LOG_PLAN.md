@@ -218,9 +218,11 @@ Cloudflare:
   with **MapLibre GL JS** instead of Leaflet. ❌ **Never** use raw `tile.openstreetmap.org` — its
   [usage policy](https://operations.osmfoundation.org/policies/tiles/) forbids production apps.
   [MapTiler pricing](https://www.maptiler.com/cloud/pricing/) · [Stadia pricing](https://stadiamaps.com/pricing/).
-- **Reverse geocoding — Nominatim** (lat/lng → place name), free public API at **1 request/second**,
-  **requires a `User-Agent` header**, cache every result. For the volume here (a handful of new
-  places per trip) this is plenty.
+- **Reverse geocoding — Nominatim** (lat/lng → place name), free public API at **1 request/second**.
+  Done **client-side** (`geo.js`) — each user's own IP, throttled to ~1/sec and cached; the browser
+  identifies via Referer (User-Agent can't be set from `fetch`). The suggested name is shown in a
+  confirmable prompt, so the user can accept or edit it (and it's the fallback if lookup is empty).
+  For the volume here (a few new places per trip) this is plenty.
   [Nominatim policy](https://operations.osmfoundation.org/policies/nominatim/).
 - **Carousel — Swiper.js** inside the Leaflet popup (touch swipe, free). Optional **Fancybox** for a
   fullscreen lightbox when a photo is tapped.
@@ -379,6 +381,7 @@ CREATE TABLE presets (
 | `POST /api/places`            | password | Create a place or wishlist item |
 | `PATCH /api/places/:id`       | password | Check off wishlist → visited; edit name/notes |
 | `DELETE /api/places/:id`      | password | Delete a place (cascade its photos) |
+| `POST /api/places/:id/merge`  | password | Merge a place into another (move its photos, delete it) |
 | `POST /api/presets`           | password | Save the current map view as a named preset |
 | `PATCH /api/presets/:id`      | password | Rename a preset (or move it) |
 | `DELETE /api/presets/:id`     | password | Delete a preset |
@@ -436,6 +439,9 @@ width-constrained so they don't overflow small screens. Test pinch-zoom and swip
   preset, rename it, or delete one (with a confirm). Seed defaults: World / Boston / SF Bay.
 - *Edit mode / write access* → the ✎ button unlocks edit mode via the shared passphrase (remembered
   per device); writes go to the Function → R2/D1. Public users only read.
+- *Manage places (edit mode)* → **drag a pin** to move it (persists via `PATCH /places/:id`); a
+  **"Merge into…"** dropdown in a place's popup combines it into another place (its photos move over,
+  the old place is removed).
 - *Wishlist with check-off* → the *To Go* tab lists `status='wishlist'` places; checking flips them
   to `visited` (writers only).
 - *Upload/delete photos, persists for all* → edit mode → upload pipeline (§6) / per-photo delete.

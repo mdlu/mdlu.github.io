@@ -5,6 +5,7 @@ import { escapeHtml, fmtDate, dateRangeLabel } from './util.js';
 
 let map, cluster;
 let photosByPlace = {};
+let allPlaces = [];
 let editing = false;
 let handlers = {};
 
@@ -51,12 +52,14 @@ export function getView() {
 // Render all places; returns { placeId: marker } for sidebar fly-to.
 export function render(data) {
   photosByPlace = groupPhotos(data.photos || []);
+  allPlaces = data.places || [];
   cluster.clearLayers();
   const markers = {};
-  for (const place of data.places || []) {
-    const m = L.marker([place.lat, place.lng], { icon: iconFor(place.status) });
+  for (const place of allPlaces) {
+    const m = L.marker([place.lat, place.lng], { icon: iconFor(place.status), draggable: editing });
     m.bindPopup(() => popupEl(place), { maxWidth: 300, minWidth: 240, className: 'tl-popup-wrap' });
     m.on('popupopen', (e) => initCarousel(e.popup));
+    if (editing) m.on('dragend', () => handlers.onMovePlace && handlers.onMovePlace(place, m.getLatLng()));
     markers[place.id] = m;
     cluster.addLayer(m);
   }
@@ -121,11 +124,16 @@ function popupEl(place) {
   const dateLabel = photoDates.length ? dateRangeLabel(photoDates) : (place.visited_at ? fmtDate(place.visited_at) : '');
   const date = dateLabel ? `<span>${escapeHtml(dateLabel)}</span>` : '';
   const notes = place.notes ? `<span class="tl-notes">${escapeHtml(place.notes)}</span>` : '';
+  const others = allPlaces.filter((q) => q.id !== place.id);
   const tools = editing ? `
     <div class="tl-edit-tools">
       <label class="tl-btn">Add photos<input type="file" accept="image/*" multiple hidden class="tl-addphotos"></label>
       <button class="tl-btn tl-btn-danger tl-delplace">Delete place</button>
-    </div>` : '';
+    </div>
+    ${others.length ? `<div class="tl-merge-row">
+      <select class="tl-merge"><option value="">Merge into…</option>${others.map((q) => `<option value="${q.id}">${escapeHtml(q.name)}</option>`).join('')}</select>
+    </div>` : ''}
+    <div class="tl-hint">Tip: drag the pin to move this place.</div>` : '';
 
   el.innerHTML = `
     <div class="tl-popup-head"><h3>${escapeHtml(place.name)}</h3>${badge}</div>
@@ -143,6 +151,10 @@ function popupEl(place) {
         ev.preventDefault(); ev.stopPropagation();
         handlers.onDeletePhoto && handlers.onDeletePhoto(b.getAttribute('data-photo'), place);
       }));
+    const mergeSel = el.querySelector('.tl-merge');
+    if (mergeSel) mergeSel.addEventListener('change', () => {
+      if (mergeSel.value) handlers.onMergePlace && handlers.onMergePlace(place, mergeSel.value);
+    });
   }
   return el;
 }

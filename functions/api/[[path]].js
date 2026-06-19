@@ -33,6 +33,7 @@ export async function onRequest(context) {
     if (method === 'POST'   && path[0] === 'photos' && path.length === 1) return addPhoto(request, env);
     if (method === 'DELETE' && path[0] === 'photos' && path[1])           return deletePhoto(env, path[1]);
     if (method === 'POST'   && path[0] === 'places' && path.length === 1) return addPlace(request, env);
+    if (method === 'POST'   && path[0] === 'places' && path[1] && path[2] === 'merge') return mergePlace(request, env, path[1]);
     if (method === 'PATCH'  && path[0] === 'places' && path[1])           return patchPlace(request, env, path[1]);
     if (method === 'DELETE' && path[0] === 'places' && path[1])           return deletePlace(env, path[1]);
 
@@ -153,6 +154,20 @@ async function deletePlace(env, id) {
   await env.DB.prepare(`DELETE FROM photos WHERE place_id = ?`).bind(id).run();
   await env.DB.prepare(`DELETE FROM places WHERE id = ?`).bind(id).run();
   return json({ ok: true, deletedPhotos: photos.length });
+}
+
+// Merge place `id` into place `into`: move its photos, then delete it.
+async function mergePlace(request, env, id) {
+  const b = await request.json().catch(() => ({}));
+  const into = b.into;
+  if (!into || into === id) return json({ error: 'invalid merge target' }, 400);
+  const target = await env.DB.prepare(`SELECT id FROM places WHERE id = ?`).bind(into).first();
+  if (!target) return json({ error: 'target place not found' }, 404);
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE photos SET place_id = ? WHERE place_id = ?`).bind(into, id),
+    env.DB.prepare(`DELETE FROM places WHERE id = ?`).bind(id),
+  ]);
+  return json({ ok: true, into });
 }
 
 async function addPreset(request, env) {
