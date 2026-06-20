@@ -1,0 +1,8 @@
+# Cloudflare Pages headers. Keep the map + API out of search engines (noindex),
+# while the public homepage stays indexable.
+/mindy
+  X-Robots-Tag: noindex, nofollow
+/mindy/*
+  X-Robots-Tag: noindex, nofollow
+/api/*
+  X-Robots-Tag: noindex, nofollow

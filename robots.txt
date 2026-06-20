@@ -1,0 +1,4 @@
+# The map page uses a noindex header/meta (kept crawlable so that's honored) and
+# isn't linked anywhere, so it won't appear in search. The API needn't be crawled.
+User-agent: *
+Disallow: /api/
