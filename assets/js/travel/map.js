@@ -57,8 +57,12 @@ export function goToResult(r) {
   searchMarker = L.marker([r.lat, r.lng], { icon: searchIcon(), zIndexOffset: 1000 }).addTo(map);
   searchMarker.bindPopup(() => searchPopupEl(r), { maxWidth: 280, minWidth: 200, className: 'tl-popup-wrap' });
   searchMarker.on('popupopen', (e) => {
-    const btn = e.popup.getElement() && e.popup.getElement().querySelector('.tl-search-add');
+    const root = e.popup.getElement();
+    if (!root) return;
+    const btn = root.querySelector('.tl-search-add');
     if (btn) btn.addEventListener('click', () => handlers.onAddSearchResult && handlers.onAddSearchResult(r));
+    const wbtn = root.querySelector('.tl-search-add-wishlist');
+    if (wbtn) wbtn.addEventListener('click', () => handlers.onAddSearchResultWishlist && handlers.onAddSearchResultWishlist(r));
   });
   if (r.bbox) map.fitBounds(r.bbox, { maxZoom: 16, padding: [20, 20] });
   else map.setView([r.lat, r.lng], 14);
@@ -82,7 +86,10 @@ function searchPopupEl(r) {
   el.innerHTML = `
     <div class="tl-popup-head"><h3>${escapeHtml(r.label)}</h3></div>
     ${editing
-      ? `<button class="tl-btn tl-btn-primary tl-search-add">+ Add as a place</button>`
+      ? `<div class="tl-search-actions">
+           <button class="tl-btn tl-btn-primary tl-search-add">+ Add as a place</button>
+           <button class="tl-btn tl-btn-wish tl-search-add-wishlist">+ Add as a place to go</button>
+         </div>`
       : `<div class="tl-hint">Turn on edit mode to add this as a place.</div>`}`;
   return el;
 }

@@ -40,7 +40,7 @@ function wireUi() {
   document.getElementById('add-wishlist').addEventListener('click', onAddWishlist);
   const addPhotosInput = document.querySelector('#add-photos input');
   if (addPhotosInput) addPhotosInput.addEventListener('change', (e) => { onAddPhotosAuto(e.target.files); e.target.value = ''; });
-  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace, onCheckOff, onEditPlace, onAddSearchResult });
+  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace, onCheckOff, onEditPlace, onAddSearchResult, onAddSearchResultWishlist });
   wireSearch();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') maybeAutoRefresh(); });
   window.addEventListener('focus', maybeAutoRefresh);
@@ -188,6 +188,19 @@ async function onAddSearchResult(r) {
   if (!data) return;
   clearSearchMarker();
   await createVisitedPlace({ lat: r.lat, lng: r.lng }, data);
+}
+
+async function onAddSearchResultWishlist(r) {
+  const data = await openModal({ title: 'Add a place to go', name: r.label || '', requireWhen: false, confirmLabel: 'Add' });
+  if (!data) return;
+  clearSearchMarker();
+  showInfo('Saving…');
+  const res = await createPlace({ name: data.name, lat: r.lat, lng: r.lng, status: 'wishlist', notes: data.notes || null }, getPassword());
+  if (!res.ok) { hideInfo(); window.alert('Could not add (' + res.status + ').'); return; }
+  const place = await res.json();
+  hideInfo();
+  if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.remove('open');
+  await refresh(place.id);
 }
 
 async function createVisitedPlace(latlng, data) {

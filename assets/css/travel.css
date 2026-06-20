@@ -154,6 +154,10 @@ body.tl-editing .tl-addplace { display: block; }
 .tl-btn:hover { background: #f5c1c1; }
 .tl-btn-danger { background: var(--accent); color: #fff; }
 .tl-btn-danger:hover { background: #c0392b; }
+.tl-btn-wish { background: var(--wish); color: #fff; }
+.tl-btn-wish:hover { background: #767f93; }
+.tl-search-actions { display: flex; flex-direction: column; gap: 6px; }
+.tl-search-actions .tl-btn { width: 100%; text-align: center; }
 .tl-photo-del {
   position: absolute; top: 6px; right: 6px; z-index: 5; border: none;
   background: rgba(192, 57, 43, 0.92); color: #fff; border-radius: 50%;
