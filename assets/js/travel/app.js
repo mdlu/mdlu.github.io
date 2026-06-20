@@ -42,6 +42,9 @@ function wireUi() {
   if (addPhotosInput) addPhotosInput.addEventListener('change', (e) => { onAddPhotosAuto(e.target.files); e.target.value = ''; });
   setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace, onCheckOff, onEditPlace });
   wireSearch();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') maybeAutoRefresh(); });
+  window.addEventListener('focus', maybeAutoRefresh);
+  setInterval(maybeAutoRefresh, 25000);
   renderPresets();
   document.querySelectorAll('.tl-tab').forEach((t) => {
     t.addEventListener('click', () => {
@@ -145,6 +148,30 @@ async function refresh(reopenId) {
   if (reopenId && state.markers[reopenId]) flyToPlace(state.markers, reopenId);
 }
 
+// Lighter refresh for auto-sync: re-pull data and re-render, but keep the timeline
+// slider where the user left it (don't rebuild it).
+async function softRefresh() {
+  let data;
+  try { data = await getData(); } catch { return; }
+  state.data = data;
+  rerender();
+  buildSidebar(state.data);
+  renderPresets();
+  buildTimelineList();
+}
+
+// Auto-refresh to pick up the other person's changes — but never mid-interaction.
+function maybeAutoRefresh() {
+  if (document.body.classList.contains('tl-editing')) return;                       // you're editing
+  if (!document.getElementById('modal').classList.contains('hidden')) return;       // a dialog is open
+  if (document.querySelector('.leaflet-popup')) return;                             // a place popup is open
+  const ms = document.getElementById('map-search-input');
+  if (ms && document.activeElement === ms) return;                                  // typing in map search
+  const msr = document.getElementById('map-search-results');
+  if (msr && !msr.classList.contains('hidden')) return;                             // suggestions showing
+  softRefresh();
+}
+
 async function onAddPlace() {
   showInfo('Click the map to drop the new place…');
   pickLocation(async (latlng) => {
@@ -206,11 +233,12 @@ async function onCheckOff(id) {
   });
   if (!data) return;
   showInfo('Saving…');
-  const res = await updatePlace(id, {
-    status: 'visited', name: data.name, notes: data.notes,
-    visited_at: data.from,
-    visited_end: data.to,
-  }, getPassword());
+  // Always set status + dates; only send name/notes if the user actually changed them
+  // (so a concurrent rename by the other person isn't clobbered).
+  const patch = { status: 'visited', visited_at: data.from, visited_end: data.to };
+  if (data.name && data.name !== place.name) patch.name = data.name;
+  if ((data.notes || '') !== (place.notes || '')) patch.notes = data.notes;
+  const res = await updatePlace(id, patch, getPassword());
   if (!res.ok) { hideInfo(); window.alert('Could not update (' + res.status + ').'); return; }
   if (data.photos.length) await uploadMany(id, data.photos);
   hideInfo();
@@ -223,7 +251,11 @@ async function onEditPlace(place) {
     requireWhen: false, confirmLabel: 'Save',
   });
   if (!data) return;
-  const res = await updatePlace(place.id, { name: data.name, notes: data.notes }, getPassword());
+  const patch = {};                                   // only send what actually changed
+  if (data.name && data.name !== place.name) patch.name = data.name;
+  if ((data.notes || '') !== (place.notes || '')) patch.notes = data.notes;
+  if (!Object.keys(patch).length) return;             // nothing changed
+  const res = await updatePlace(place.id, patch, getPassword());
   if (!res.ok) { window.alert('Could not save (' + res.status + ').'); return; }
   await refresh(place.id);
 }

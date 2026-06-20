@@ -35,7 +35,7 @@ body.tl-editing #toggle-edit { background: var(--accent); color: #fff; }
 .tl-saveview {
   display: block; width: calc(100% - 16px); margin: 8px; padding: 10px;
   border: none; border-radius: 10px; background: #eafaef; font-family: inherit; font-weight: 700;
-  cursor: pointer;
+  font-size: 0.9rem; text-align: center; cursor: pointer;
 }
 .tl-saveview:hover { background: #d8f3e0; }
 .tl-view-row { display: flex; align-items: center; gap: 4px; padding: 1px 6px; }
@@ -137,7 +137,8 @@ body.tl-editing #toggle-edit { background: var(--accent); color: #fff; }
 /* add-place button (only visible in edit mode) */
 .tl-addplace {
   display: none; margin: 8px; padding: 10px; width: calc(100% - 16px);
-  border: none; border-radius: 10px; background: #eafaef; font-family: inherit; font-weight: 700; cursor: pointer;
+  border: none; border-radius: 10px; background: #eafaef; font-family: inherit; font-weight: 700;
+  font-size: 0.9rem; text-align: center; cursor: pointer;
 }
 .tl-addplace:hover { background: #d8f3e0; }
 body.tl-editing .tl-addplace { display: block; }
