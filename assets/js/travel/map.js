@@ -97,16 +97,23 @@ export function render(data, range) {
     if (!placeInRange(place, range)) continue;
     const m = L.marker([place.lat, place.lng], { icon: iconFor(place.status), draggable: editing });
     m.bindPopup(() => popupEl(place), { maxWidth: 300, minWidth: 240, className: 'tl-popup-wrap' });
-    m.off('click');                 // replace Leaflet's click-to-open with hover-preview + click-to-pin
-    m._pinned = false;
-    m.on('mouseover', () => { if (!m._pinned) m.openPopup(); });
-    m.on('mouseout', () => { if (!m._pinned) m.closePopup(); });
+    m.off('click');                 // hover-preview + click-to-pin instead of Leaflet's click-to-open
+    m._pinned = false; m._overPopup = false;
+    m.on('mouseover', () => { clearTimeout(m._closeTimer); if (!m._pinned) m.openPopup(); });
+    m.on('mouseout', () => { if (!m._pinned) scheduleClose(m); });
     m.on('click', () => {
       if (m._pinned) { m._pinned = false; m.closePopup(); }
       else { m._pinned = true; m.openPopup(); }
     });
-    m.on('popupclose', () => { m._pinned = false; });   // reverts to hover-only when closed
-    m.on('popupopen', (e) => initCarousel(e.popup));
+    m.on('popupopen', (e) => {
+      initCarousel(e.popup);
+      const el = e.popup.getElement();
+      if (el) {
+        el.addEventListener('mouseenter', () => { m._overPopup = true; clearTimeout(m._closeTimer); });
+        el.addEventListener('mouseleave', () => { m._overPopup = false; if (!m._pinned) scheduleClose(m); });
+      }
+    });
+    m.on('popupclose', () => { m._pinned = false; m._overPopup = false; clearTimeout(m._closeTimer); });
     if (editing) m.on('dragend', () => handlers.onMovePlace && handlers.onMovePlace(place, m.getLatLng()));
     markers[place.id] = m;
     cluster.addLayer(m);
@@ -141,6 +148,13 @@ export function reopenPlace(markers, id) {
 }
 
 // ---------- internals ----------
+
+// Close a hover-opened popup shortly after the cursor leaves both the marker and the popup,
+// so there's time to move onto the popup and click its arrows/buttons.
+function scheduleClose(m) {
+  clearTimeout(m._closeTimer);
+  m._closeTimer = setTimeout(() => { if (!m._pinned && !m._overPopup) m.closePopup(); }, 250);
+}
 
 function groupPhotos(photos) {
   const by = {};
