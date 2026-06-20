@@ -69,8 +69,8 @@ function renderPresets() {
     <div class="tl-view-row">
       <button class="tl-view" data-preset="${p.id}">${escapeHtml(p.label)}</button>
       ${state.editing ? `
-        <button class="tl-view-act" data-edit="${p.id}" title="Rename" aria-label="Rename ${escapeHtml(p.label)}">&#9998;</button>
-        <button class="tl-view-act tl-view-del" data-del="${p.id}" title="Delete" aria-label="Delete ${escapeHtml(p.label)}">&times;</button>` : ''}
+        <button class="tl-view-act" data-edit="${p.id}" title="Rename" aria-label="Rename ${escapeHtml(p.label)}"><i class="fa-solid fa-pen"></i></button>
+        <button class="tl-view-act tl-view-del" data-del="${p.id}" title="Delete" aria-label="Delete ${escapeHtml(p.label)}"><i class="fa-solid fa-xmark"></i></button>` : ''}
     </div>`).join('');
   if (!presets.length && !state.editing) html += '<div class="tl-empty">No saved views yet.</div>';
   wrap.innerHTML = html;

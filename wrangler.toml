@@ -11,7 +11,7 @@ compatibility_date = "2026-05-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "travel"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "9c1a66cc-62e4-4add-aad7-371b6ac322a8"
 
 # --- R2 bucket: photo files (full-res originals + thumbnails) ---
 # Create in the cloud with `wrangler r2 bucket create travel-photos`.
