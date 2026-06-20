@@ -32,11 +32,8 @@ async function main() {
 
 function wireUi() {
   const sb = document.getElementById('sidebar');
-  const views = document.getElementById('views');
-  document.getElementById('toggle-sidebar').addEventListener('click', () => { views.classList.remove('open'); sb.classList.toggle('open'); });
+  document.getElementById('toggle-sidebar').addEventListener('click', () => sb.classList.toggle('open'));
   document.getElementById('close-sidebar').addEventListener('click', () => sb.classList.remove('open'));
-  document.getElementById('toggle-views').addEventListener('click', () => { sb.classList.remove('open'); views.classList.toggle('open'); });
-  document.getElementById('close-views').addEventListener('click', () => views.classList.remove('open'));
   document.getElementById('toggle-edit').addEventListener('click', toggleEdit);
   document.getElementById('add-place').addEventListener('click', onAddPlace);
   document.getElementById('add-wishlist').addEventListener('click', onAddWishlist);
@@ -50,7 +47,7 @@ function wireUi() {
       document.querySelectorAll('.tl-tab').forEach((x) => x.classList.remove('active'));
       t.classList.add('active');
       const tab = t.getAttribute('data-tab');
-      ['visited', 'wishlist', 'timeline'].forEach((name) => {
+      ['visited', 'wishlist', 'timeline', 'views'].forEach((name) => {
         document.getElementById('tab-' + name).classList.toggle('hidden', tab !== name);
       });
     });
@@ -77,7 +74,7 @@ function renderPresets() {
   wrap.querySelectorAll('[data-preset]').forEach((b) => {
     b.addEventListener('click', () => {
       applyPreset(presets.find((x) => x.id === b.getAttribute('data-preset')));
-      if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('views').classList.remove('open');
+      if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.remove('open');
     });
   });
   if (state.editing) {

@@ -14,27 +14,26 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5/dist/fancybox/fancybox.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15/dist/nouislider.min.css">
   <link rel="stylesheet" href="../assets/css/travel.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css">
 </head>
 <body>
   <div id="map"></div>
 
-  <button id="toggle-sidebar" class="tl-fab" aria-label="Show places list" title="Places">&#9776;</button>
-  <button id="toggle-views" class="tl-fab tl-fab-views" aria-label="Show saved views" title="Views">&#9733;</button>
-  <button id="toggle-edit" class="tl-fab tl-fab-edit" aria-label="Edit mode" title="Edit mode">&#9998;</button>
+  <button id="toggle-sidebar" class="tl-fab" aria-label="Open menu" title="Menu">&#9776;</button>
 
   <div id="map-search" class="tl-mapsearch">
     <input id="map-search-input" type="search" placeholder="Search any place…" autocomplete="off">
     <div id="map-search-results" class="tl-mapsearch-results hidden"></div>
   </div>
 
-  <aside id="sidebar" class="tl-sidebar">
+  <aside id="sidebar" class="tl-sidebar tl-sidebar-right">
     <div class="tl-sidebar-head">
-      <div class="tl-tabs">
-        <button class="tl-tab active" data-tab="visited">Visited</button>
-        <button class="tl-tab" data-tab="wishlist">To&nbsp;Go</button>
-        <button class="tl-tab" data-tab="timeline">Timeline</button>
-      </div>
-      <button id="close-sidebar" class="tl-iconbtn" aria-label="Close">&times;</button>
+      <button class="tl-tab tl-iconbtn active" data-tab="visited" title="Visited" aria-label="Visited"><i class="fa-solid fa-location-dot"></i></button>
+      <button class="tl-tab tl-iconbtn" data-tab="wishlist" title="To go" aria-label="To go"><i class="fa-solid fa-star"></i></button>
+      <button class="tl-tab tl-iconbtn" data-tab="timeline" title="Timeline" aria-label="Timeline"><i class="fa-solid fa-clock"></i></button>
+      <button class="tl-tab tl-iconbtn" data-tab="views" title="Views" aria-label="Views"><i class="fa-solid fa-bookmark"></i></button>
+      <button id="toggle-edit" class="tl-iconbtn" title="Edit mode" aria-label="Edit mode"><i class="fa-solid fa-pen"></i></button>
+      <button id="close-sidebar" class="tl-iconbtn" title="Close" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="tl-tabpane" id="tab-visited">
       <button id="add-place" class="tl-addplace">+ Add place</button>
@@ -55,14 +54,7 @@
       </div>
       <div class="tl-list" id="list-timeline"></div>
     </div>
-  </aside>
-
-  <aside id="views" class="tl-sidebar tl-sidebar-right">
-    <div class="tl-sidebar-head">
-      <span class="tl-panel-title">Views</span>
-      <button id="close-views" class="tl-iconbtn" aria-label="Close">&times;</button>
-    </div>
-    <div class="tl-tabpane"><div class="tl-list" id="list-views"></div></div>
+    <div class="tl-tabpane hidden" id="tab-views"><div class="tl-list" id="list-views"></div></div>
   </aside>
 
   <div id="status" class="tl-status hidden"></div>

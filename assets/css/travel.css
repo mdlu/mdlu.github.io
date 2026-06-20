@@ -29,9 +29,7 @@ body {
 }
 .tl-fab:hover { background: #f5c1c1; }
 /* extra FABs (stacked under the list button, top-right) */
-.tl-fab-views { top: 62px; font-size: 1.05rem; }
-.tl-fab-edit { top: 112px; font-size: 1.1rem; }
-body.tl-editing .tl-fab-edit { background: var(--accent); color: #fff; }
+body.tl-editing #toggle-edit { background: var(--accent); color: #fff; }
 
 /* right "Views" sidebar contents */
 .tl-saveview {
@@ -106,14 +104,11 @@ body.tl-editing .tl-fab-edit { background: var(--accent); color: #fff; }
 .tl-sidebar-right { left: auto; right: 0; transform: translateX(100%); }
 .tl-sidebar-right.open { transform: translateX(0); }
 .tl-panel-title { font-weight: 700; font-size: 0.95rem; padding: 8px 4px; }
-.tl-sidebar-head { display: flex; align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid #eee; }
-.tl-tabs { display: flex; gap: 6px; }
-.tl-tab {
-  border: none; background: #f3f3f5; border-radius: 10px; padding: 8px 14px;
-  cursor: pointer; font-family: inherit; font-size: 0.85rem;
-}
+.tl-sidebar-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #eee; }
+.tl-tabs { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+.tl-tab { cursor: pointer; }
 .tl-tab.active { background: var(--accent); color: #fff; }
-.tl-sidebar-head .tl-iconbtn { margin-left: auto; }
+.tl-sidebar-head .tl-iconbtn { margin-left: 0; }
 .tl-tabpane { overflow-y: auto; flex: 1; }
 .tl-list { padding: 8px; }
 .tl-row {
@@ -219,8 +214,8 @@ body.tl-editing .tl-addplace { display: block; }
 }
 /* global map search */
 .tl-mapsearch {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-  width: min(420px, calc(100vw - 130px)); z-index: 1000;
+  position: absolute; top: 12px; left: 54px;
+  width: min(380px, calc(100vw - 118px)); z-index: 1000;
 }
 .tl-mapsearch input {
   width: 100%; padding: 10px 14px; border: none; border-radius: 12px;

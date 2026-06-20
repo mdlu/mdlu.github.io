@@ -424,10 +424,11 @@ browser-image-compression — **lazy-load on first upload** so public viewers do
 Reuse the existing Comfortaa for visual consistency. (Fancybox is free for personal/non-commercial
 use; swap to PhotoSwipe (MIT) if that ever matters.)
 
-**Layout — desktop:** full-height **Leaflet map**; a floating list button (top-right) opens a
-**collapsible sidebar** with *Visited* / *To Go* / *Timeline* tabs; a
-floating **✎ edit** button unlocks edit mode (passphrase); a right-side **Views** sidebar (★ button)
-holds the saved presets; Leaflet's zoom control is top-left.
+**Layout — desktop:** full-height **Leaflet map**; a single **☰ button** (top-right) opens/collapses
+one **right sidebar** with *Visited / To Go / Timeline / Views* tabs. The sidebar header holds an
+**✎ edit** toggle (unlocks edit mode via passphrase) and a close ×. A **global search** box sits
+top-left beside Leaflet's zoom control. (Everything lives in the one right panel so a right-side
+button never opens a left-side menu.)
 
 **Layout — mobile:** map fills the screen; the sidebar becomes a **bottom sheet** that slides up
 (Bootstrap offcanvas or a simple CSS sheet). Timeline slider spans the bottom; popups/carousels are
