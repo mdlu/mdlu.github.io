@@ -8,6 +8,7 @@ let photosByPlace = {};
 let allPlaces = [];
 let editing = false;
 let handlers = {};
+let searchMarker = null;
 
 export function setEditing(v) { editing = !!v; }
 export function setHandlers(h) { handlers = h || {}; }
@@ -49,11 +50,41 @@ export function getView() {
   return { lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6), zoom: map.getZoom() };
 }
 
-// Fly to a search result — fit its bounding box, or zoom in on its point.
+// Fly to a search result, drop a temporary pin there, and offer to add it as a place.
 export function goToResult(r) {
   if (!map || !r) return;
+  clearSearchMarker();
+  searchMarker = L.marker([r.lat, r.lng], { icon: searchIcon(), zIndexOffset: 1000 }).addTo(map);
+  searchMarker.bindPopup(() => searchPopupEl(r), { maxWidth: 280, minWidth: 200, className: 'tl-popup-wrap' });
+  searchMarker.on('popupopen', (e) => {
+    const btn = e.popup.getElement() && e.popup.getElement().querySelector('.tl-search-add');
+    if (btn) btn.addEventListener('click', () => handlers.onAddSearchResult && handlers.onAddSearchResult(r));
+  });
   if (r.bbox) map.fitBounds(r.bbox, { maxZoom: 16, padding: [20, 20] });
   else map.setView([r.lat, r.lng], 14);
+  searchMarker.openPopup();
+}
+
+export function clearSearchMarker() {
+  if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+}
+
+function searchIcon() {
+  return L.divIcon({
+    className: 'tl-pin tl-pin-search', html: '<span class="tl-pin-dot"></span>',
+    iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -12],
+  });
+}
+
+function searchPopupEl(r) {
+  const el = document.createElement('div');
+  el.className = 'tl-popup';
+  el.innerHTML = `
+    <div class="tl-popup-head"><h3>${escapeHtml(r.label)}</h3></div>
+    ${editing
+      ? `<button class="tl-btn tl-btn-primary tl-search-add">+ Add as a place</button>`
+      : `<div class="tl-hint">Turn on edit mode to add this as a place.</div>`}`;
+  return el;
 }
 
 // Render all places; returns { placeId: marker } for sidebar fly-to.

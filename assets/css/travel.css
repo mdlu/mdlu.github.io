@@ -59,6 +59,7 @@ body.tl-editing #toggle-edit { background: var(--accent); color: #fff; }
   border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 .tl-pin-visited .tl-pin-dot { background: var(--accent); }
+.tl-pin-search .tl-pin-dot { background: #1a56db; }
 .tl-pin-wishlist .tl-pin-dot { background: #fff; border-color: var(--wish); }
 .tl-pin-wishlist .tl-pin-dot::after {
   content: ''; display: block; width: 6px; height: 6px; border-radius: 50%;

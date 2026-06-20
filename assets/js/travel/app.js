@@ -1,6 +1,6 @@
 // Entry point: load data, build the map + sidebar.
 import { getData, createPlace, updatePlace, deletePlace, deletePhoto, mergePlace, createPreset, updatePreset, deletePreset } from './api.js';
-import { initMap, render, flyToPlace, applyPreset, getView, goToResult, setEditing, setHandlers, pickLocation } from './map.js';
+import { initMap, render, flyToPlace, applyPreset, getView, goToResult, clearSearchMarker, setEditing, setHandlers, pickLocation } from './map.js';
 import { getPassword, hasPassword, promptAndStore } from './auth.js';
 import { processFile, uploadProcessed, uploadPhoto } from './upload.js';
 import { reverseGeocode, searchPlaces, distanceMeters, centroidOf, groupByProximity } from './geo.js';
@@ -40,7 +40,7 @@ function wireUi() {
   document.getElementById('add-wishlist').addEventListener('click', onAddWishlist);
   const addPhotosInput = document.querySelector('#add-photos input');
   if (addPhotosInput) addPhotosInput.addEventListener('change', (e) => { onAddPhotosAuto(e.target.files); e.target.value = ''; });
-  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace, onCheckOff, onEditPlace });
+  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace, onCheckOff, onEditPlace, onAddSearchResult });
   wireSearch();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') maybeAutoRefresh(); });
   window.addEventListener('focus', maybeAutoRefresh);
@@ -181,6 +181,13 @@ async function onAddPlace() {
     if (!data) return;
     await createVisitedPlace(latlng, data);
   });
+}
+
+async function onAddSearchResult(r) {
+  const data = await openModal({ title: 'Add place', name: r.label || '', requireWhen: true, confirmLabel: 'Add place' });
+  if (!data) return;
+  clearSearchMarker();
+  await createVisitedPlace({ lat: r.lat, lng: r.lng }, data);
 }
 
 async function createVisitedPlace(latlng, data) {
