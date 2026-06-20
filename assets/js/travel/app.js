@@ -18,6 +18,7 @@ async function main() {
   initMap();
   if (window.Fancybox) window.Fancybox.bind('[data-fancybox]');  // fullscreen photo gallery
   wireUi();
+  if (!window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.add('open'); // open by default on desktop
   try {
     state.data = await getData();
   } catch (err) {
