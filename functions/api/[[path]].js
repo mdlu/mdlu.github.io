@@ -67,6 +67,7 @@ async function getPhoto(env, key) {
   obj.writeHttpMetadata(headers);
   headers.set('etag', obj.httpEtag);
   headers.set('cache-control', 'public, max-age=31536000, immutable');
+  headers.set('x-robots-tag', 'noindex');
   return new Response(obj.body, { headers });
 }
 
@@ -217,7 +218,7 @@ function authorized(request, env) {
 function json(obj, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...extraHeaders },
+    headers: { 'content-type': 'application/json; charset=utf-8', 'x-robots-tag': 'noindex', ...extraHeaders },
   });
 }
 
