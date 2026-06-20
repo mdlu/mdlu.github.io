@@ -69,6 +69,28 @@ export async function uploadPhoto(placeId, file) {
   return uploadProcessed(placeId, await processFile(file));
 }
 
+// Read just the EXIF dates from a set of files; returns { from, to } as YYYY-MM-DD (or nulls).
+export async function readPhotoDates(files) {
+  await ensureLibs();
+  const ds = [];
+  for (const f of files) {
+    try {
+      const m = await window.exifr.parse(f, ['DateTimeOriginal']);
+      if (m && m.DateTimeOriginal) { const d = new Date(m.DateTimeOriginal); if (!isNaN(d.getTime())) ds.push(d); }
+    } catch { /* skip */ }
+  }
+  if (!ds.length) return { from: null, to: null };
+  ds.sort((a, b) => a - b);
+  return { from: toDateInput(ds[0]), to: toDateInput(ds[ds.length - 1]) };
+}
+
+function toDateInput(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function isHeic(file) {
   const t = (file.type || '').toLowerCase(), n = (file.name || '').toLowerCase();
   return t.includes('heic') || t.includes('heif') || n.endsWith('.heic') || n.endsWith('.heif');

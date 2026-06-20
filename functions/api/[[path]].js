@@ -47,7 +47,7 @@ export async function onRequest(context) {
 
 async function getData(env) {
   const places = (await env.DB.prepare(
-    `SELECT id, name, lat, lng, status, visited_at, notes, created_at FROM places`
+    `SELECT id, name, lat, lng, status, visited_at, visited_end, notes, created_at FROM places`
   ).all()).results || [];
   const photos = (await env.DB.prepare(
     `SELECT id, place_id, r2_key, thumb_key, taken_at, lat, lng, caption, created_at
@@ -120,29 +120,32 @@ async function addPlace(request, env) {
   const id = b.id || crypto.randomUUID();
   const status = b.status === 'wishlist' ? 'wishlist' : 'visited';
   const created_at = new Date().toISOString();
-  const visited_at = b.visited_at || null;  // place date is derived from its photos; this is only a fallback
+  const visited_at = b.visited_at || null;    // usually derived from photos; fallback for manual dates
+  const visited_end = b.visited_end || null;  // optional end of a manual date range
+  const notes = b.notes || null;
   await env.DB.prepare(
-    `INSERT INTO places (id, name, lat, lng, status, visited_at, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, b.name, Number(b.lat), Number(b.lng), status, visited_at, b.notes || null, created_at).run();
-  return json({ id, name: b.name, lat: Number(b.lat), lng: Number(b.lng), status, visited_at, notes: b.notes || null, created_at });
+    `INSERT INTO places (id, name, lat, lng, status, visited_at, visited_end, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(id, b.name, Number(b.lat), Number(b.lng), status, visited_at, visited_end, notes, created_at).run();
+  return json({ id, name: b.name, lat: Number(b.lat), lng: Number(b.lng), status, visited_at, visited_end, notes, created_at });
 }
 
 async function patchPlace(request, env, id) {
   const b = await request.json().catch(() => ({}));
   const cur = await env.DB.prepare(`SELECT * FROM places WHERE id = ?`).bind(id).first();
   if (!cur) return json({ error: 'not found' }, 404);
-  const name = b.name ?? cur.name;
-  const lat = b.lat != null ? Number(b.lat) : cur.lat;
-  const lng = b.lng != null ? Number(b.lng) : cur.lng;
-  const notes = b.notes ?? cur.notes;
+  const name = b.name !== undefined ? b.name : cur.name;
+  const lat = b.lat !== undefined ? Number(b.lat) : cur.lat;
+  const lng = b.lng !== undefined ? Number(b.lng) : cur.lng;
+  const notes = b.notes !== undefined ? (b.notes || null) : cur.notes;
   const status = (b.status === 'visited' || b.status === 'wishlist') ? b.status : cur.status;
-  let visited_at = b.visited_at ?? cur.visited_at;
+  let visited_at = b.visited_at !== undefined ? (b.visited_at || null) : cur.visited_at;
+  const visited_end = b.visited_end !== undefined ? (b.visited_end || null) : cur.visited_end;
   if (status === 'visited' && !visited_at) visited_at = new Date().toISOString().slice(0, 10);
   await env.DB.prepare(
-    `UPDATE places SET name=?, lat=?, lng=?, status=?, visited_at=?, notes=? WHERE id=?`
-  ).bind(name, lat, lng, status, visited_at, notes, id).run();
-  return json({ id, name, lat, lng, status, visited_at, notes });
+    `UPDATE places SET name=?, lat=?, lng=?, status=?, visited_at=?, visited_end=?, notes=? WHERE id=?`
+  ).bind(name, lat, lng, status, visited_at, visited_end, notes, id).run();
+  return json({ id, name, lat, lng, status, visited_at, visited_end, notes });
 }
 
 async function deletePlace(env, id) {

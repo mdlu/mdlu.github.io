@@ -12,7 +12,7 @@ export async function reverseGeocode(lat, lng) {
   lastCall = Date.now();
   let name = '';
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`;
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=15&addressdetails=1`;
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
     if (res.ok) name = nameFrom(await res.json());
   } catch { /* offline/blocked — caller falls back to a manual name */ }
@@ -47,7 +47,14 @@ export function groupByProximity(items, meters) {
 
 function nameFrom(d) {
   const a = d.address || {};
-  const local = a.city || a.town || a.village || a.suburb || a.neighbourhood || a.county || a.state || '';
-  return [local, a.country].filter(Boolean).join(', ') || d.display_name || '';
+  // Most specific named feature at the point (POI, then street/area), then the locality, then country.
+  const specific = d.name || a.amenity || a.tourism || a.leisure || a.shop || a.building
+    || a.road || a.neighbourhood || a.suburb || '';
+  const locality = a.city || a.town || a.village || a.municipality || a.county || a.state || '';
+  const parts = [];
+  if (specific) parts.push(specific);
+  if (locality && locality !== specific) parts.push(locality);
+  if (a.country && !parts.includes(a.country)) parts.push(a.country);
+  return parts.slice(0, 3).join(', ') || d.display_name || '';
 }
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }

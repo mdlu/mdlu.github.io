@@ -1,7 +1,7 @@
 // Leaflet map: clustered place markers + photo-carousel popups.
 import { CONFIG } from './config.js';
 import { photoUrl } from './api.js';
-import { escapeHtml, fmtDate, dateRangeLabel } from './util.js';
+import { escapeHtml, fmtDate, placeDateText, placeInterval } from './util.js';
 
 let map, cluster;
 let photosByPlace = {};
@@ -70,12 +70,9 @@ export function render(data, range) {
 // A place passes the date filter if it's undated (no photos) or has a photo within [start, end].
 function placeInRange(place, range) {
   if (!range) return true;
-  const ds = photosByPlace[place.id] || [];
-  if (!ds.length) return true;
-  return ds.some((p) => {
-    const t = p.taken_at ? new Date(p.taken_at).getTime() : NaN;
-    return !isNaN(t) && t >= range[0] && t <= range[1];
-  });
+  const iv = placeInterval(place, (photosByPlace[place.id] || []).map((p) => p.taken_at).filter(Boolean));
+  if (!iv) return true;                              // undated places always show
+  return iv[0] <= range[1] && iv[1] >= range[0];     // place's date span overlaps the selected window
 }
 
 export function flyToPlace(markers, id) {
@@ -133,14 +130,16 @@ function popupEl(place) {
 
   const badge = place.status === 'wishlist' ? '<span class="tl-badge">Wishlist</span>' : '';
   const photoDates = photos.map((p) => p.taken_at).filter(Boolean);
-  const dateLabel = photoDates.length ? dateRangeLabel(photoDates) : (place.visited_at ? fmtDate(place.visited_at) : '');
+  const dateLabel = placeDateText(place, photoDates);
   const date = dateLabel ? `<span>${escapeHtml(dateLabel)}</span>` : '';
   const notes = place.notes ? `<span class="tl-notes">${escapeHtml(place.notes)}</span>` : '';
   const others = allPlaces.filter((q) => q.id !== place.id);
   const tools = editing ? `
     <div class="tl-edit-tools">
-      <label class="tl-btn">Add photos<input type="file" accept="image/*" multiple hidden class="tl-addphotos"></label>
-      ${place.status === 'wishlist' ? `<button class="tl-btn tl-checkvisited">Mark as visited</button>` : ''}
+      <button class="tl-btn tl-editdetails">Edit</button>
+      ${place.status === 'wishlist'
+        ? `<button class="tl-btn tl-checkvisited">Mark as visited</button>`
+        : `<label class="tl-btn">Add photos<input type="file" accept="image/*" multiple hidden class="tl-addphotos"></label>`}
       <button class="tl-btn tl-btn-danger tl-delplace">Delete place</button>
     </div>
     ${others.length ? `<div class="tl-merge-row">
@@ -170,6 +169,8 @@ function popupEl(place) {
     });
     const checkBtn = el.querySelector('.tl-checkvisited');
     if (checkBtn) checkBtn.addEventListener('click', () => handlers.onCheckOff && handlers.onCheckOff(place.id));
+    const editBtn = el.querySelector('.tl-editdetails');
+    if (editBtn) editBtn.addEventListener('click', () => handlers.onEditPlace && handlers.onEditPlace(place));
   }
   return el;
 }

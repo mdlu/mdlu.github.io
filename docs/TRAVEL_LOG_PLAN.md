@@ -220,9 +220,10 @@ Cloudflare:
   [MapTiler pricing](https://www.maptiler.com/cloud/pricing/) · [Stadia pricing](https://stadiamaps.com/pricing/).
 - **Reverse geocoding — Nominatim** (lat/lng → place name), free public API at **1 request/second**.
   Done **client-side** (`geo.js`) — each user's own IP, throttled to ~1/sec and cached; the browser
-  identifies via Referer (User-Agent can't be set from `fetch`). The suggested name is shown in a
-  confirmable prompt, so the user can accept or edit it (and it's the fallback if lookup is empty).
-  For the volume here (a few new places per trip) this is plenty.
+  identifies via Referer (User-Agent can't be set from `fetch`). Uses **zoom=15** so the suggestion is
+  locality/neighbourhood-level (e.g. "South Beach, San Francisco" → else suburb → city/country),
+  subject to OSM coverage. The suggested name is shown in the add dialog, so the user can accept or
+  edit it. For the volume here (a few new places per trip) this is plenty.
   [Nominatim policy](https://operations.osmfoundation.org/policies/nominatim/).
 - **Carousel — Swiper.js** inside the Leaflet popup (touch swipe, free). Optional **Fancybox** for a
   fullscreen lightbox when a photo is tapped.
@@ -332,8 +333,9 @@ CREATE TABLE places (
   lng         REAL NOT NULL,
   status      TEXT NOT NULL DEFAULT 'visited'  -- 'visited' | 'wishlist'
                  CHECK (status IN ('visited','wishlist')),
-  visited_at  TEXT,                        -- ISO date set when checked off / first photo
-  notes       TEXT,
+  visited_at  TEXT,                        -- start date (when no photos; else derived from photos)
+  visited_end TEXT,                        -- optional end date for a manual date range
+  notes       TEXT,                        -- short free-text note (visited or wishlist)
   created_at  TEXT NOT NULL
 );
 
@@ -439,12 +441,15 @@ width-constrained so they don't overflow small screens. Test pinch-zoom and swip
   preset, rename it, or delete one (with a confirm). Seed defaults: World / Boston / SF Bay.
 - *Edit mode / write access* → the ✎ button unlocks edit mode via the shared passphrase (remembered
   per device); writes go to the Function → R2/D1. Public users only read.
-- *Manage places (edit mode)* → **drag a pin** to move it (persists via `PATCH /places/:id`); a
-  **"Merge into…"** dropdown in a place's popup combines it into another place (its photos move over,
-  the old place is removed).
-- *Wishlist with check-off* → the *To Go* tab lists `status='wishlist'` places; **"+ Add a place to
-  go"** creates one (reverse-geocoded name suggestion); a **✓** on each row (or "Mark as visited" in
-  the popup) flips it to `visited` (writers only), moving it to the Visited tab.
+- *Manage places (edit mode)* → **drag a pin** to move it; **"Merge into…"** combines two places;
+  **"Edit name / notes"** renames a place and edits its note (both sections). Each place can carry a
+  short free-text **note**.
+- *Add a visited place* → **"+ Add place"** (Visited tab) → click the map → a dialog **requires
+  either ≥1 photo (dates inferred) or a typed date / date-range** (calendar picker) before you can
+  confirm; notes optional. Same dialog is reused when checking off a wishlist item.
+- *Wishlist with check-off* → the *To Go* tab has only **"+ Add a place to go"**; each row shows an
+  **empty checkbox** — clicking it opens the same "when did you go?" dialog (photos or dates) and,
+  on confirm, flips the place to `visited`, moving it to the Visited tab.
 - *Upload/delete photos, persists for all* → edit mode → upload pipeline (§6) / per-photo delete.
 - *Auto-location from EXIF* → §6 step 4; manual fallback when GPS missing.
 - *Dates/times* → each photo's `taken_at` (from EXIF) is shown; a **place's date is derived from its

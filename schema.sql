@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS places (
   lng         REAL NOT NULL,
   status      TEXT NOT NULL DEFAULT 'visited'   -- 'visited' | 'wishlist'
                  CHECK (status IN ('visited','wishlist')),
-  visited_at  TEXT,                        -- ISO date set when checked off / first photo
+  visited_at  TEXT,                        -- start date (used when no photos; else derived from photos)
+  visited_end TEXT,                        -- optional end date for a manually-entered date range
   notes       TEXT,
   created_at  TEXT NOT NULL
 );

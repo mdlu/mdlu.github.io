@@ -31,9 +31,11 @@
       </div>
       <button id="close-sidebar" class="tl-iconbtn" aria-label="Close">&times;</button>
     </div>
-    <label id="add-photos" class="tl-addplace">+ Add photos (auto-placed by GPS)<input type="file" accept="image/*" multiple hidden></label>
-    <button id="add-place" class="tl-addplace">+ Add place (then click the map)</button>
-    <div class="tl-tabpane" id="tab-visited"><div class="tl-list" id="list-visited"></div></div>
+    <div class="tl-tabpane" id="tab-visited">
+      <button id="add-place" class="tl-addplace">+ Add place</button>
+      <label id="add-photos" class="tl-addplace">+ Add photos (auto-placed by GPS)<input type="file" accept="image/*" multiple hidden></label>
+      <div class="tl-list" id="list-visited"></div>
+    </div>
     <div class="tl-tabpane hidden" id="tab-wishlist">
       <button id="add-wishlist" class="tl-addplace">+ Add a place to go</button>
       <div class="tl-list" id="list-wishlist"></div>
@@ -58,6 +60,28 @@
 
   <div id="status" class="tl-status hidden"></div>
   <div id="error" class="tl-error hidden"></div>
+
+  <div id="modal" class="tl-modal hidden">
+    <div class="tl-modal-card">
+      <h3 id="modal-title"></h3>
+      <label class="tl-field">Name<input id="m-name" type="text" autocomplete="off"></label>
+      <label class="tl-field">Notes (optional)<textarea id="m-notes" rows="2"></textarea></label>
+      <div id="m-when" class="tl-when">
+        <div class="tl-when-label">When did you go? Add photos (dates inferred) or enter the dates.</div>
+        <label class="tl-field">Photos<input id="m-photos" type="file" accept="image/*" multiple></label>
+        <div id="m-when-status" class="tl-when-status"></div>
+        <div class="tl-when-or">— or —</div>
+        <div class="tl-dates">
+          <label class="tl-field">From<input id="m-from" type="date"></label>
+          <label class="tl-field">To (optional)<input id="m-to" type="date"></label>
+        </div>
+      </div>
+      <div class="tl-modal-actions">
+        <button id="modal-cancel" class="tl-btn">Cancel</button>
+        <button id="modal-ok" class="tl-btn tl-btn-primary" disabled>Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>

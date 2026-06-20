@@ -4,7 +4,8 @@ import { initMap, render, flyToPlace, applyPreset, getView, setEditing, setHandl
 import { getPassword, hasPassword, promptAndStore } from './auth.js';
 import { processFile, uploadProcessed, uploadPhoto } from './upload.js';
 import { reverseGeocode, distanceMeters, centroidOf, groupByProximity } from './geo.js';
-import { escapeHtml, fmtDate, dateRangeLabel } from './util.js';
+import { openModal } from './modal.js';
+import { escapeHtml, fmtDate, dateRangeLabel, placeDateText, placeInterval } from './util.js';
 
 const state = { data: null, markers: {}, editing: false, range: null };
 let timelineSlider = null;
@@ -39,7 +40,7 @@ function wireUi() {
   document.getElementById('add-wishlist').addEventListener('click', onAddWishlist);
   const addPhotosInput = document.querySelector('#add-photos input');
   if (addPhotosInput) addPhotosInput.addEventListener('change', (e) => { onAddPhotosAuto(e.target.files); e.target.value = ''; });
-  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace, onCheckOff });
+  setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace, onCheckOff, onEditPlace });
   renderPresets();
   document.querySelectorAll('.tl-tab').forEach((t) => {
     t.addEventListener('click', () => {
@@ -147,14 +148,37 @@ async function onAddPlace() {
   showInfo('Click the map to drop the new place…');
   pickLocation(async (latlng) => {
     hideInfo();
-    const name = window.prompt('Name this place:');
-    if (!name || !name.trim()) return;
-    const res = await createPlace({ name: name.trim(), lat: latlng.lat, lng: latlng.lng, status: 'visited' }, getPassword());
-    if (!res.ok) { window.alert('Could not create place (' + res.status + ').'); return; }
-    const place = await res.json();
-    if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.remove('open');
-    await refresh(place.id);
+    const suggested = await reverseGeocode(latlng.lat, latlng.lng);
+    const data = await openModal({ title: 'Add place', name: suggested || '', requireWhen: true, confirmLabel: 'Add place' });
+    if (!data) return;
+    await createVisitedPlace(latlng, data);
   });
+}
+
+async function createVisitedPlace(latlng, data) {
+  showInfo('Saving…');
+  const res = await createPlace({
+    name: data.name, lat: latlng.lat, lng: latlng.lng, status: 'visited',
+    notes: data.notes || null,
+    visited_at: data.from,
+    visited_end: data.to,
+  }, getPassword());
+  if (!res.ok) { hideInfo(); window.alert('Could not create place (' + res.status + ').'); return; }
+  const place = await res.json();
+  if (data.photos.length) await uploadMany(place.id, data.photos);
+  hideInfo();
+  if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.remove('open');
+  await refresh(place.id);
+}
+
+async function uploadMany(placeId, files) {
+  let done = 0, failed = 0;
+  for (const f of files) {
+    showInfo(`Uploading ${done + 1}/${files.length}…`);
+    try { await uploadPhoto(placeId, f); } catch (e) { failed += 1; }
+    done += 1;
+  }
+  if (failed) window.alert(`${failed} of ${files.length} photo(s) couldn't be uploaded.`);
 }
 
 async function onAddWishlist() {
@@ -162,9 +186,9 @@ async function onAddWishlist() {
   pickLocation(async (latlng) => {
     hideInfo();
     const suggested = await reverseGeocode(latlng.lat, latlng.lng);
-    const name = window.prompt('Name this place to go:', suggested || '');
-    if (!name || !name.trim()) return;
-    const res = await createPlace({ name: name.trim(), lat: latlng.lat, lng: latlng.lng, status: 'wishlist' }, getPassword());
+    const data = await openModal({ title: 'Add a place to go', name: suggested || '', requireWhen: false, confirmLabel: 'Add' });
+    if (!data) return;
+    const res = await createPlace({ name: data.name, lat: latlng.lat, lng: latlng.lng, status: 'wishlist', notes: data.notes || null }, getPassword());
     if (!res.ok) { window.alert('Could not add (' + res.status + ').'); return; }
     const place = await res.json();
     if (window.matchMedia('(max-width: 768px)').matches) document.getElementById('sidebar').classList.remove('open');
@@ -173,9 +197,34 @@ async function onAddWishlist() {
 }
 
 async function onCheckOff(id) {
-  const res = await updatePlace(id, { status: 'visited' }, getPassword());
-  if (!res.ok) { window.alert('Could not update (' + res.status + ').'); return; }
+  const place = state.data.places.find((p) => p.id === id);
+  if (!place) return;
+  const data = await openModal({
+    title: `Mark "${place.name}" as visited`, name: place.name, notes: place.notes || '',
+    requireWhen: true, confirmLabel: 'Mark visited',
+  });
+  if (!data) return;
+  showInfo('Saving…');
+  const res = await updatePlace(id, {
+    status: 'visited', name: data.name, notes: data.notes,
+    visited_at: data.from,
+    visited_end: data.to,
+  }, getPassword());
+  if (!res.ok) { hideInfo(); window.alert('Could not update (' + res.status + ').'); return; }
+  if (data.photos.length) await uploadMany(id, data.photos);
+  hideInfo();
   await refresh(id);
+}
+
+async function onEditPlace(place) {
+  const data = await openModal({
+    title: 'Edit name / notes', name: place.name, notes: place.notes || '',
+    requireWhen: false, confirmLabel: 'Save',
+  });
+  if (!data) return;
+  const res = await updatePlace(place.id, { name: data.name, notes: data.notes }, getPassword());
+  if (!res.ok) { window.alert('Could not save (' + res.status + ').'); return; }
+  await refresh(place.id);
 }
 
 async function onAddPhotos(place, fileList) {
@@ -301,18 +350,25 @@ async function onMergePlace(place, intoId) {
   await refresh(intoId);
 }
 
+function photoDatesByPlace() {
+  const m = {};
+  for (const ph of state.data.photos || []) if (ph.taken_at) (m[ph.place_id] ||= []).push(ph.taken_at);
+  return m;
+}
+
 function buildTimeline() {
   const sliderEl = document.getElementById('timeline-slider');
   const labels = document.getElementById('timeline-labels');
   if (!sliderEl || !labels) return;
   if (timelineSlider) { timelineSlider.destroy(); timelineSlider = null; }
 
-  const ts = (state.data.photos || [])
-    .map((p) => p.taken_at).filter(Boolean)
-    .map((s) => new Date(s).getTime()).filter((t) => !isNaN(t));
+  const photoDates = photoDatesByPlace();
+  const ts = (state.data.places || [])
+    .map((p) => placeInterval(p, photoDates[p.id] || []))
+    .filter(Boolean).flat();
 
   if (ts.length < 1 || !window.noUiSlider) {
-    labels.textContent = 'No dated photos yet.';
+    labels.textContent = 'No dated places yet.';
     sliderEl.innerHTML = '';
     document.getElementById('list-timeline').innerHTML = '';
     state.range = null;
@@ -340,21 +396,16 @@ function buildTimeline() {
   });
   timelineSlider = sliderEl.noUiSlider;
 
+  let rafPending = false;
   timelineSlider.on('update', (vals) => {
-    labels.textContent = `${fmtDate(new Date(+vals[0]))} – ${fmtDate(new Date(+vals[1]))}`;
-  });
-  timelineSlider.on('change', (vals) => {
     const a = Math.round(+vals[0]); const b = Math.round(+vals[1]);
+    labels.textContent = `${fmtDate(new Date(a))} – ${fmtDate(new Date(b))}`;
     state.range = (a <= lo && b >= hi) ? null : [a, b + day - 1];
-    rerender();
-    buildTimelineList();
+    if (rafPending) return;                 // live as you drag, throttled to one redraw per frame
+    rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; rerender(); buildTimelineList(); });
   });
-  document.getElementById('timeline-reset').onclick = () => {
-    timelineSlider.set([lo, hi]);
-    state.range = null;
-    rerender();
-    buildTimelineList();
-  };
+  document.getElementById('timeline-reset').onclick = () => timelineSlider.set([lo, hi]);
 
   buildTimelineList();
 }
@@ -363,28 +414,21 @@ function buildTimelineList() {
   const wrap = document.getElementById('list-timeline');
   if (!wrap) return;
   const range = state.range;
-  const inRange = (t) => !range || (t >= range[0] && t <= range[1]);
+  const photoDates = photoDatesByPlace();
+  const overlaps = (iv) => !range || (iv[0] <= range[1] && iv[1] >= range[0]);
 
-  const byPlace = {};
-  for (const ph of state.data.photos || []) {
-    if (!ph.taken_at) continue;
-    const t = new Date(ph.taken_at).getTime();
-    if (isNaN(t) || !inRange(t)) continue;
-    (byPlace[ph.place_id] ||= []).push(t);
-  }
-  const rows = Object.keys(byPlace).map((pid) => {
-    const place = state.data.places.find((p) => p.id === pid);
-    if (!place) return null;
-    const dates = byPlace[pid].sort((a, b) => a - b);
-    return { place, first: dates[0], count: dates.length, label: dateRangeLabel(dates.map((t) => new Date(t).toISOString())) };
-  }).filter(Boolean).sort((a, b) => a.first - b.first);
+  const rows = (state.data.places || []).map((p) => {
+    const iv = placeInterval(p, photoDates[p.id] || []);
+    if (!iv || !overlaps(iv)) return null;
+    return { place: p, start: iv[0], label: placeDateText(p, photoDates[p.id] || []) };
+  }).filter(Boolean).sort((a, b) => b.start - a.start);   // reverse chronological by start date
 
   wrap.innerHTML = rows.length
     ? rows.map((r) => `<button class="tl-row" data-place="${r.place.id}">
         <span class="tl-row-name">${escapeHtml(r.place.name)}</span>
         <span class="tl-row-meta">${escapeHtml(r.label)}</span>
       </button>`).join('')
-    : '<div class="tl-empty">No photos in this date range.</div>';
+    : '<div class="tl-empty">No places in this date range.</div>';
 
   wrap.querySelectorAll('[data-place]').forEach((el) => el.addEventListener('click', () => {
     flyToPlace(state.markers, el.getAttribute('data-place'));
@@ -403,16 +447,11 @@ function hideInfo() {
 }
 
 function buildSidebar(data) {
-  const photoCount = {};
   const photoDates = {};
   for (const ph of data.photos) {
-    photoCount[ph.place_id] = (photoCount[ph.place_id] || 0) + 1;
     if (ph.taken_at) (photoDates[ph.place_id] ||= []).push(ph.taken_at);
   }
-  const dateOf = (p) => {
-    const ds = photoDates[p.id] || [];
-    return ds.length ? dateRangeLabel(ds) : (p.visited_at ? fmtDate(p.visited_at) : '');
-  };
+  const dateOf = (p) => placeDateText(p, photoDates[p.id] || []);
   const sortKey = (p) => {
     const ds = (photoDates[p.id] || []).slice().sort();
     return ds.length ? ds[ds.length - 1] : (p.visited_at || '');
@@ -423,7 +462,7 @@ function buildSidebar(data) {
   const wishlist = data.places.filter((p) => p.status === 'wishlist').sort((a, b) => a.name.localeCompare(b.name));
 
   document.getElementById('list-visited').innerHTML =
-    visited.map((p) => placeRow(p, photoCount[p.id] || 0, dateOf(p))).join('') || emptyMsg('No places yet — add your first!');
+    visited.map((p) => placeRow(p, dateOf(p))).join('') || emptyMsg('No places yet — add your first!');
   document.getElementById('list-wishlist').innerHTML =
     wishlist.map((p) => wishlistRow(p, dateOf(p))).join('') || emptyMsg('Nothing on the wishlist yet.');
 
@@ -439,11 +478,10 @@ function buildSidebar(data) {
   }));
 }
 
-function placeRow(p, n, dateLabel) {
-  const meta = [dateLabel, n ? `${n} photo${n > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+function placeRow(p, dateLabel) {
   return `<button class="tl-row" data-place="${p.id}">
     <span class="tl-row-name">${escapeHtml(p.name)}</span>
-    <span class="tl-row-meta">${escapeHtml(meta)}</span>
+    <span class="tl-row-meta">${escapeHtml(dateLabel || '')}</span>
   </button>`;
 }
 
@@ -453,7 +491,7 @@ function wishlistRow(p, dateLabel) {
     <span class="tl-row-meta">${escapeHtml(dateLabel || '')}</span>
   </button>`;
   if (!state.editing) return main;
-  return `<div class="tl-wish-row">${main}<button class="tl-check" data-check="${p.id}" title="Mark as visited" aria-label="Mark ${escapeHtml(p.name)} as visited">✓</button></div>`;
+  return `<div class="tl-wish-row">${main}<button class="tl-check" data-check="${p.id}" title="Mark as visited" aria-label="Mark ${escapeHtml(p.name)} as visited"></button></div>`;
 }
 
 function emptyMsg(t) { return `<div class="tl-empty">${escapeHtml(t)}</div>`; }
