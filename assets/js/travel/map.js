@@ -97,6 +97,15 @@ export function render(data, range) {
     if (!placeInRange(place, range)) continue;
     const m = L.marker([place.lat, place.lng], { icon: iconFor(place.status), draggable: editing });
     m.bindPopup(() => popupEl(place), { maxWidth: 300, minWidth: 240, className: 'tl-popup-wrap' });
+    m.off('click');                 // replace Leaflet's click-to-open with hover-preview + click-to-pin
+    m._pinned = false;
+    m.on('mouseover', () => { if (!m._pinned) m.openPopup(); });
+    m.on('mouseout', () => { if (!m._pinned) m.closePopup(); });
+    m.on('click', () => {
+      if (m._pinned) { m._pinned = false; m.closePopup(); }
+      else { m._pinned = true; m.openPopup(); }
+    });
+    m.on('popupclose', () => { m._pinned = false; });   // reverts to hover-only when closed
     m.on('popupopen', (e) => initCarousel(e.popup));
     if (editing) m.on('dragend', () => handlers.onMovePlace && handlers.onMovePlace(place, m.getLatLng()));
     markers[place.id] = m;
@@ -116,10 +125,19 @@ function placeInRange(place, range) {
 export function flyToPlace(markers, id) {
   const m = markers[id];
   if (!m) return;
+  m._pinned = true;                 // intentional open -> stays until clicked/closed
   cluster.zoomToShowLayer(m, () => {
     map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 8), { duration: 0.6 });
     m.openPopup();
   });
+}
+
+// Reopen a place's popup in place (no fly) — used after edits/uploads so it stays up.
+export function reopenPlace(markers, id) {
+  const m = markers[id];
+  if (!m) return;
+  m._pinned = true;                 // after an edit/add, keep the popup up
+  cluster.zoomToShowLayer(m, () => m.openPopup());
 }
 
 // ---------- internals ----------
@@ -127,8 +145,17 @@ export function flyToPlace(markers, id) {
 function groupPhotos(photos) {
   const by = {};
   for (const p of photos) (by[p.place_id] ||= []).push(p);
-  for (const k in by) by[k].sort((a, b) => String(a.taken_at || '').localeCompare(String(b.taken_at || '')));
+  for (const k in by) by[k].sort(byTakenAt);
   return by;
+}
+
+// Oldest -> newest by taken_at; undated photos go last.
+function byTakenAt(a, b) {
+  const ta = a.taken_at || '', tb = b.taken_at || '';
+  if (!ta && !tb) return 0;
+  if (!ta) return 1;
+  if (!tb) return -1;
+  return ta.localeCompare(tb);
 }
 
 function iconFor(status) {

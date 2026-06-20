@@ -1,6 +1,6 @@
 // Entry point: load data, build the map + sidebar.
 import { getData, createPlace, updatePlace, deletePlace, deletePhoto, mergePlace, createPreset, updatePreset, deletePreset } from './api.js';
-import { initMap, render, flyToPlace, applyPreset, getView, goToResult, clearSearchMarker, setEditing, setHandlers, pickLocation } from './map.js';
+import { initMap, render, flyToPlace, reopenPlace, applyPreset, getView, goToResult, clearSearchMarker, setEditing, setHandlers, pickLocation } from './map.js';
 import { getPassword, hasPassword, promptAndStore } from './auth.js';
 import { processFile, uploadProcessed, uploadPhoto } from './upload.js';
 import { reverseGeocode, searchPlaces, distanceMeters, centroidOf, groupByProximity } from './geo.js';
@@ -145,7 +145,7 @@ async function refresh(reopenId) {
   buildSidebar(state.data);
   renderPresets();
   buildTimeline();
-  if (reopenId && state.markers[reopenId]) flyToPlace(state.markers, reopenId);
+  if (reopenId && state.markers[reopenId]) reopenPlace(state.markers, reopenId);
 }
 
 // Lighter refresh for auto-sync: re-pull data and re-render, but keep the timeline
