@@ -458,6 +458,9 @@ width-constrained so they don't overflow small screens. Test pinch-zoom and swip
 - *Timeline view* → a **Timeline tab** with a noUiSlider date-range slider (with **year tick marks**)
   that filters the map markers and shows a chronological list by `taken_at`. Undated places (wishlist
   / photo-less) stay visible; a Reset button returns to the full span.
+- *Search* → instant client-side filters on the *Visited* and *To Go* lists; plus a **global map
+  search** (top-center) with autocomplete via **Photon** (komoot) — Enter or a suggestion flies to
+  and zooms into any place on Earth. (Photon is used for type-ahead since Nominatim discourages it.)
 
 **Inspiration to borrow from** (researched):
 [`jasonlcy91/embers-of-life-china-trip-2026`](https://github.com/jasonlcy91/embers-of-life-china-trip-2026)

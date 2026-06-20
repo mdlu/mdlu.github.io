@@ -22,6 +22,11 @@
   <button id="toggle-views" class="tl-fab tl-fab-views" aria-label="Show saved views" title="Views">&#9733;</button>
   <button id="toggle-edit" class="tl-fab tl-fab-edit" aria-label="Edit mode" title="Edit mode">&#9998;</button>
 
+  <div id="map-search" class="tl-mapsearch">
+    <input id="map-search-input" type="search" placeholder="Search any place…" autocomplete="off">
+    <div id="map-search-results" class="tl-mapsearch-results hidden"></div>
+  </div>
+
   <aside id="sidebar" class="tl-sidebar">
     <div class="tl-sidebar-head">
       <div class="tl-tabs">
@@ -34,10 +39,12 @@
     <div class="tl-tabpane" id="tab-visited">
       <button id="add-place" class="tl-addplace">+ Add place</button>
       <label id="add-photos" class="tl-addplace">+ Add photos (auto-placed by GPS)<input type="file" accept="image/*" multiple hidden></label>
+      <input id="search-visited" class="tl-search" type="search" placeholder="Search visited…" autocomplete="off">
       <div class="tl-list" id="list-visited"></div>
     </div>
     <div class="tl-tabpane hidden" id="tab-wishlist">
       <button id="add-wishlist" class="tl-addplace">+ Add a place to go</button>
+      <input id="search-wishlist" class="tl-search" type="search" placeholder="Search to-go…" autocomplete="off">
       <div class="tl-list" id="list-wishlist"></div>
     </div>
     <div class="tl-tabpane hidden" id="tab-timeline">

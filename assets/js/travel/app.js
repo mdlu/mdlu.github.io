@@ -1,14 +1,16 @@
 // Entry point: load data, build the map + sidebar.
 import { getData, createPlace, updatePlace, deletePlace, deletePhoto, mergePlace, createPreset, updatePreset, deletePreset } from './api.js';
-import { initMap, render, flyToPlace, applyPreset, getView, setEditing, setHandlers, pickLocation } from './map.js';
+import { initMap, render, flyToPlace, applyPreset, getView, goToResult, setEditing, setHandlers, pickLocation } from './map.js';
 import { getPassword, hasPassword, promptAndStore } from './auth.js';
 import { processFile, uploadProcessed, uploadPhoto } from './upload.js';
-import { reverseGeocode, distanceMeters, centroidOf, groupByProximity } from './geo.js';
+import { reverseGeocode, searchPlaces, distanceMeters, centroidOf, groupByProximity } from './geo.js';
 import { openModal } from './modal.js';
 import { escapeHtml, fmtDate, dateRangeLabel, placeDateText, placeInterval } from './util.js';
 
-const state = { data: null, markers: {}, editing: false, range: null };
+const state = { data: null, markers: {}, editing: false, range: null, filterVisited: '', filterWishlist: '' };
 let timelineSlider = null;
+let searchResults = [];
+let searchTimer = null;
 
 function rerender() { state.markers = render(state.data, state.range); }
 
@@ -41,6 +43,7 @@ function wireUi() {
   const addPhotosInput = document.querySelector('#add-photos input');
   if (addPhotosInput) addPhotosInput.addEventListener('change', (e) => { onAddPhotosAuto(e.target.files); e.target.value = ''; });
   setHandlers({ onAddPhotos, onDeletePhoto, onDeletePlace, onMovePlace, onMergePlace, onCheckOff, onEditPlace });
+  wireSearch();
   renderPresets();
   document.querySelectorAll('.tl-tab').forEach((t) => {
     t.addEventListener('click', () => {
@@ -436,6 +439,58 @@ function buildTimelineList() {
   }));
 }
 
+function wireSearch() {
+  const sv = document.getElementById('search-visited');
+  if (sv) sv.addEventListener('input', () => { state.filterVisited = sv.value; if (state.data) buildSidebar(state.data); });
+  const sw = document.getElementById('search-wishlist');
+  if (sw) sw.addEventListener('input', () => { state.filterWishlist = sw.value; if (state.data) buildSidebar(state.data); });
+  wireMapSearch();
+}
+
+function wireMapSearch() {
+  const input = document.getElementById('map-search-input');
+  if (!input) return;
+  input.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = input.value.trim();
+    if (q.length < 2) { hideMapResults(); return; }
+    searchTimer = setTimeout(async () => { searchResults = await searchPlaces(q); renderMapResults(); }, 300);
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(searchTimer);
+      if (searchResults.length) { selectMapResult(0); return; }
+      searchPlaces(input.value.trim()).then((r) => { searchResults = r; if (r.length) selectMapResult(0); });
+    } else if (e.key === 'Escape') { hideMapResults(); input.blur(); }
+  });
+  input.addEventListener('blur', () => setTimeout(hideMapResults, 150));
+}
+
+function renderMapResults() {
+  const box = document.getElementById('map-search-results');
+  if (!box) return;
+  if (!searchResults.length) { hideMapResults(); return; }
+  box.innerHTML = searchResults.map((r, i) => `<button class="tl-mapsearch-item" data-i="${i}">${escapeHtml(r.label)}</button>`).join('');
+  box.classList.remove('hidden');
+  box.querySelectorAll('[data-i]').forEach((b) =>
+    b.addEventListener('mousedown', (e) => { e.preventDefault(); selectMapResult(+b.getAttribute('data-i')); }));
+}
+
+function selectMapResult(i) {
+  const r = searchResults[i];
+  if (!r) return;
+  goToResult(r);
+  const input = document.getElementById('map-search-input');
+  if (input) input.value = r.label;
+  hideMapResults();
+}
+
+function hideMapResults() {
+  const box = document.getElementById('map-search-results');
+  if (box) { box.classList.add('hidden'); box.innerHTML = ''; }
+}
+
 function showInfo(msg) {
   const e = document.getElementById('status');
   if (!e) return;
@@ -457,14 +512,17 @@ function buildSidebar(data) {
     return ds.length ? ds[ds.length - 1] : (p.visited_at || '');
   };
 
-  const visited = data.places.filter((p) => p.status === 'visited')
+  const fv = (state.filterVisited || '').toLowerCase();
+  const fw = (state.filterWishlist || '').toLowerCase();
+  const visited = data.places.filter((p) => p.status === 'visited' && (!fv || p.name.toLowerCase().includes(fv)))
     .sort((a, b) => String(sortKey(b)).localeCompare(String(sortKey(a))));
-  const wishlist = data.places.filter((p) => p.status === 'wishlist').sort((a, b) => a.name.localeCompare(b.name));
+  const wishlist = data.places.filter((p) => p.status === 'wishlist' && (!fw || p.name.toLowerCase().includes(fw)))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   document.getElementById('list-visited').innerHTML =
-    visited.map((p) => placeRow(p, dateOf(p))).join('') || emptyMsg('No places yet — add your first!');
+    visited.map((p) => placeRow(p, dateOf(p))).join('') || emptyMsg(fv ? 'No matches.' : 'No places yet — add your first!');
   document.getElementById('list-wishlist').innerHTML =
-    wishlist.map((p) => wishlistRow(p, dateOf(p))).join('') || emptyMsg('Nothing on the wishlist yet.');
+    wishlist.map((p) => wishlistRow(p, dateOf(p))).join('') || emptyMsg(fw ? 'No matches.' : 'Nothing on the wishlist yet.');
 
   document.querySelectorAll('#list-visited [data-place], #list-wishlist [data-place]').forEach((el) => {
     el.addEventListener('click', () => {

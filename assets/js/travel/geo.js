@@ -20,6 +20,34 @@ export async function reverseGeocode(lat, lng) {
   return name;
 }
 
+// Forward search (autocomplete) via Photon (komoot) — built for as-you-type, free, CORS-enabled.
+export async function searchPlaces(query) {
+  const q = (query || '').trim();
+  if (q.length < 2) return [];
+  try {
+    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=en`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.features || []).map(featureToResult).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function featureToResult(f) {
+  const c = f.geometry && f.geometry.coordinates;
+  if (!c) return null;
+  const p = f.properties || {};
+  const label = [p.name, p.city || p.state || p.county, p.country]
+    .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+  let bbox = null;
+  if (Array.isArray(p.extent) && p.extent.length === 4) {
+    const [w, n, e, s] = p.extent;   // Photon extent = [west, north, east, south]
+    bbox = [[s, w], [n, e]];
+  }
+  return { label: label || p.name || `${c[1].toFixed(4)}, ${c[0].toFixed(4)}`, lat: c[1], lng: c[0], bbox };
+}
+
 export function distanceMeters(a, b) {
   const R = 6371000, toRad = (x) => (x * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);

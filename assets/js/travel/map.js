@@ -49,6 +49,13 @@ export function getView() {
   return { lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6), zoom: map.getZoom() };
 }
 
+// Fly to a search result — fit its bounding box, or zoom in on its point.
+export function goToResult(r) {
+  if (!map || !r) return;
+  if (r.bbox) map.fitBounds(r.bbox, { maxZoom: 16, padding: [20, 20] });
+  else map.setView([r.lat, r.lng], 14);
+}
+
 // Render all places; returns { placeId: marker } for sidebar fly-to.
 export function render(data, range) {
   photosByPlace = groupPhotos(data.photos || []);
@@ -129,6 +136,7 @@ function popupEl(place) {
   }
 
   const badge = place.status === 'wishlist' ? '<span class="tl-badge">Wishlist</span>' : '';
+  const gmaps = `<a class="tl-gmaps" href="https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}" target="_blank" rel="noopener" title="Open in Google Maps">Maps&nbsp;&#8599;</a>`;
   const photoDates = photos.map((p) => p.taken_at).filter(Boolean);
   const dateLabel = placeDateText(place, photoDates);
   const date = dateLabel ? `<span>${escapeHtml(dateLabel)}</span>` : '';
@@ -148,7 +156,7 @@ function popupEl(place) {
     <div class="tl-hint">Tip: drag the pin to move this place.</div>` : '';
 
   el.innerHTML = `
-    <div class="tl-popup-head"><h3>${escapeHtml(place.name)}</h3>${badge}</div>
+    <div class="tl-popup-head"><h3>${escapeHtml(place.name)}</h3>${badge}${gmaps}</div>
     ${media}
     <div class="tl-popup-meta">${date}${notes}</div>
     ${tools}`;
